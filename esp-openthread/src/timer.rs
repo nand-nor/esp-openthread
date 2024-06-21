@@ -1,21 +1,16 @@
-use crate::platform::CURRENT_INSTANCE;
-use core::cell::RefCell;
-use critical_section::Mutex;
-use esp_hal::peripherals::Interrupt;
-use esp_hal::prelude::_esp_hal_timer_Timer;
-use esp_hal::timer::systimer::{Alarm, Target};
+use esp_hal::{
+    peripherals::Interrupt,
+    prelude::_esp_hal_timer_Timer,
+    timer::systimer::{Alarm, Target},
+};
 use esp_hal_procmacros::handler;
-use esp_openthread_sys::bindings::otError;
-use esp_openthread_sys::bindings::otError_OT_ERROR_NONE;
-use esp_openthread_sys::bindings::otInstance;
-use esp_openthread_sys::bindings::otPlatAlarmMilliFired;
+use esp_openthread_sys::bindings::{
+    otError, otError_OT_ERROR_NONE, otInstance, otPlatAlarmMilliFired,
+};
+
+use crate::{CURRENT_INSTANCE, TIMER, TIMER_CALLBACK_SHOULD_RUN};
 
 const TICKS_PER_SECOND: u64 = 16_000_000;
-
-static TIMER: Mutex<RefCell<Option<Alarm<Target, esp_hal::Blocking, 0>>>> =
-    Mutex::new(RefCell::new(None));
-
-static TIMER_CALLBACK_SHOULD_RUN: Mutex<RefCell<bool>> = Mutex::new(RefCell::new(false));
 
 pub fn install_isr(mut timer: Alarm<Target, esp_hal::Blocking, 0>) {
     timer.clear_interrupt();

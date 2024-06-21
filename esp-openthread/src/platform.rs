@@ -5,8 +5,6 @@ use esp_openthread_sys::{
     c_types,
 };
 
-pub(crate) static mut CURRENT_INSTANCE: usize = 0;
-
 #[no_mangle]
 pub extern "C" fn otPlatReset(_instance: *const u8) -> otError {
     todo!()
@@ -25,7 +23,12 @@ pub unsafe extern "C" fn otPlatLog(
 // other C functions
 
 #[no_mangle]
-pub extern "C" fn vsnprintf() {
+pub extern "C" fn vsnprintf(
+    _dst: *mut u8,
+    _n: u32,
+    _format: *const u8,
+    mut _args: core::ffi::VaListImpl,
+) {
     todo!()
 }
 
