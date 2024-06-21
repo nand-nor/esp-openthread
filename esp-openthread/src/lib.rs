@@ -595,7 +595,7 @@ impl<'a> OpenThread<'a> {
     /// Make sure to periodically call this function.
     pub fn run_tasklets(&self) {
         unsafe {
-            if otTaskletsArePending(self.instance) {
+            while otTaskletsArePending(self.instance) {
                 otTaskletsProcess(self.instance);
             }
         }
@@ -686,6 +686,54 @@ impl<'a> OpenThread<'a> {
                     log::warn!("Unsupported frame type received");
                 }
             };
+        }
+    }
+
+    pub fn set_child_timeout(&mut self, timeout: u32) -> Result<(), Error> {
+        unsafe { otThreadSetChildTimeout(self.instance, timeout) };
+        Ok(())
+    }
+
+    pub fn get_device_role(&self) -> ThreadDeviceRole {
+        let role = unsafe { otThreadGetDeviceRole(self.instance) };
+        role.into()
+    }
+    
+}
+
+#[derive(Debug)]
+pub enum ThreadDeviceRole {
+    Disabled, 
+    Detached,
+    Child,
+    Router,
+    Leader,
+    Unknown
+}
+
+#[allow(non_upper_case_globals)]
+impl From<otDeviceRole> for ThreadDeviceRole {
+    fn from(role: otDeviceRole) -> Self {
+        match role {
+            otDeviceRole_OT_DEVICE_ROLE_DISABLED => ThreadDeviceRole::Disabled,
+            otDeviceRole_OT_DEVICE_ROLE_DETACHED => ThreadDeviceRole::Detached,
+            otDeviceRole_OT_DEVICE_ROLE_CHILD => ThreadDeviceRole::Child,
+            otDeviceRole_OT_DEVICE_ROLE_ROUTER => ThreadDeviceRole::Router,
+            otDeviceRole_OT_DEVICE_ROLE_LEADER => ThreadDeviceRole::Leader,
+            _ => ThreadDeviceRole::Unknown
+        }
+    }
+}
+
+impl core::fmt::Display for ThreadDeviceRole {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            ThreadDeviceRole::Disabled => write!(f, "Disabled"),
+            ThreadDeviceRole::Detached => write!(f, "Detached"),
+            ThreadDeviceRole::Child=> write!(f, "Child"),
+            ThreadDeviceRole::Router=> write!(f, "Router"),
+            ThreadDeviceRole::Leader => write!(f, "Leader"),
+            ThreadDeviceRole::Unknown => write!(f, "Unknown"),
         }
     }
 }
