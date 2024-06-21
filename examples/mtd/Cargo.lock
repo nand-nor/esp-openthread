@@ -66,6 +66,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "21c7ab3e4ae80853c7f8dcdcd904dfa25c02cc373534b8d165194325a088a7cc"
 
 [[package]]
+name = "bytemuck"
+version = "1.16.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b236fc92302c97ed75b38da1f4917b5cdda4984745740f153a5d3059e48d725e"
+
+[[package]]
 name = "byteorder"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -277,7 +283,7 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 [[package]]
 name = "esp-backtrace"
 version = "0.12.1"
-source = "git+https://github.com/esp-rs/esp-hal.git#eee20de116259b99df56690e2201cc77b273aea7"
+source = "git+https://github.com/esp-rs/esp-hal.git#9691141feddf7fff73fd5d734a99d213ae9966eb"
 dependencies = [
  "esp-build",
  "esp-println",
@@ -287,7 +293,7 @@ dependencies = [
 [[package]]
 name = "esp-build"
 version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-hal.git#eee20de116259b99df56690e2201cc77b273aea7"
+source = "git+https://github.com/esp-rs/esp-hal.git#9691141feddf7fff73fd5d734a99d213ae9966eb"
 dependencies = [
  "quote",
  "syn 2.0.66",
@@ -297,7 +303,7 @@ dependencies = [
 [[package]]
 name = "esp-hal"
 version = "0.18.0"
-source = "git+https://github.com/esp-rs/esp-hal.git#eee20de116259b99df56690e2201cc77b273aea7"
+source = "git+https://github.com/esp-rs/esp-hal.git#9691141feddf7fff73fd5d734a99d213ae9966eb"
 dependencies = [
  "basic-toml",
  "bitfield",
@@ -332,7 +338,7 @@ dependencies = [
 [[package]]
 name = "esp-hal-procmacros"
 version = "0.11.0"
-source = "git+https://github.com/esp-rs/esp-hal.git#eee20de116259b99df56690e2201cc77b273aea7"
+source = "git+https://github.com/esp-rs/esp-hal.git#9691141feddf7fff73fd5d734a99d213ae9966eb"
 dependencies = [
  "darling",
  "document-features",
@@ -346,9 +352,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "esp-hal-smartled"
+version = "0.11.0"
+source = "git+https://github.com/esp-rs/esp-hal.git#9691141feddf7fff73fd5d734a99d213ae9966eb"
+dependencies = [
+ "document-features",
+ "esp-hal",
+ "fugit",
+ "smart-leds-trait",
+]
+
+[[package]]
 name = "esp-ieee802154"
 version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-hal.git#eee20de116259b99df56690e2201cc77b273aea7"
+source = "git+https://github.com/esp-rs/esp-hal.git#9691141feddf7fff73fd5d734a99d213ae9966eb"
 dependencies = [
  "byte",
  "critical-section",
@@ -363,7 +380,7 @@ dependencies = [
 [[package]]
 name = "esp-metadata"
 version = "0.1.1"
-source = "git+https://github.com/esp-rs/esp-hal.git#eee20de116259b99df56690e2201cc77b273aea7"
+source = "git+https://github.com/esp-rs/esp-hal.git#9691141feddf7fff73fd5d734a99d213ae9966eb"
 dependencies = [
  "basic-toml",
  "lazy_static",
@@ -397,7 +414,7 @@ dependencies = [
 [[package]]
 name = "esp-println"
 version = "0.9.1"
-source = "git+https://github.com/esp-rs/esp-hal.git#eee20de116259b99df56690e2201cc77b273aea7"
+source = "git+https://github.com/esp-rs/esp-hal.git#9691141feddf7fff73fd5d734a99d213ae9966eb"
 dependencies = [
  "critical-section",
  "esp-build",
@@ -408,7 +425,7 @@ dependencies = [
 [[package]]
 name = "esp-riscv-rt"
 version = "0.8.0"
-source = "git+https://github.com/esp-rs/esp-hal.git#eee20de116259b99df56690e2201cc77b273aea7"
+source = "git+https://github.com/esp-rs/esp-hal.git#9691141feddf7fff73fd5d734a99d213ae9966eb"
 dependencies = [
  "document-features",
  "riscv",
@@ -620,12 +637,14 @@ dependencies = [
  "critical-section",
  "esp-backtrace",
  "esp-hal",
+ "esp-hal-smartled",
  "esp-ieee802154",
  "esp-openthread",
  "esp-println",
  "heapless",
  "log",
  "no-std-net",
+ "smart-leds",
 ]
 
 [[package]]
@@ -756,6 +775,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a66a03ae7c801facd77a29370b4faec201768915ac14a721ba36f20bc9c209b"
 
 [[package]]
+name = "rgb"
+version = "0.8.37"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05aaa8004b64fd573fc9d002f4e632d51ad4f026c2b5ba95fcb6c2f32c2c47d8"
+dependencies = [
+ "bytemuck",
+]
+
+[[package]]
 name = "riscv"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -811,6 +839,24 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.66",
+]
+
+[[package]]
+name = "smart-leds"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66df34e571fa9993fa6f99131a374d58ca3d694b75f9baac93458fe0d6057bf0"
+dependencies = [
+ "smart-leds-trait",
+]
+
+[[package]]
+name = "smart-leds-trait"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0bc64ee02bbbf469603016df746c0ed224f263280b6ebb49b7ebadbff375c572"
+dependencies = [
+ "rgb",
 ]
 
 [[package]]
