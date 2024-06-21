@@ -1,17 +1,18 @@
 use crate::platform::CURRENT_INSTANCE;
 use core::cell::RefCell;
 use critical_section::Mutex;
-use esp_hal::peripherals::Interrupt;
-use esp_hal::prelude::_esp_hal_timer_Timer;
 use esp_hal::{
+    peripherals::Interrupt,
+    prelude::_esp_hal_timer_Timer,
     timer::systimer::{Alarm, SpecificComparator, SpecificUnit, Target},
     Blocking,
 };
 use esp_hal_procmacros::handler;
-use esp_openthread_sys::bindings::otError;
-use esp_openthread_sys::bindings::otError_OT_ERROR_NONE;
-use esp_openthread_sys::bindings::otInstance;
-use esp_openthread_sys::bindings::otPlatAlarmMilliFired;
+use esp_openthread_sys::bindings::{
+    otError, otError_OT_ERROR_NONE, otInstance, otPlatAlarmMilliFired,
+};
+
+use crate::CURRENT_INSTANCE;
 
 const TICKS_PER_SECOND: u64 = 16_000_000;
 

@@ -1,18 +1,27 @@
 #![no_std]
 #![feature(c_variadic)]
 
+#[cfg(any(
+    all(feature = "mtd", feature = "sed"),
+    all(feature = "mtd", feature = "ssed"),
+    all(feature = "mtd", feature = "ftd"),
+    all(feature = "ftd", feature = "sed"),
+    all(feature = "ftd", feature = "ssed"),
+))]
+compile_error!("Multiple device type features set");
+
+#[cfg(any(feature = "ftd", feature = "sed", feature = "ssed"))]
+compile_error!("Unsupported device type selected");
+
 mod entropy;
+mod net;
 mod platform;
 mod radio;
 mod timer;
 
-use core::{
-    borrow::BorrowMut,
-    cell::RefCell,
-    marker::{PhantomData, PhantomPinned},
-    pin::Pin,
-    ptr::addr_of_mut,
-};
+pub use net::udp::{udp_receive_handler, UdpSocket};
+
+use core::{borrow::BorrowMut, cell::RefCell, marker::PhantomData, ptr::addr_of_mut};
 
 use bitflags::bitflags;
 use critical_section::Mutex;
@@ -20,7 +29,7 @@ use esp_hal::{
     timer::systimer::{Alarm, SpecificComparator, SpecificUnit, Target},
     Blocking,
 };
-use esp_ieee802154::{rssi_to_lqi, Ieee802154};
+use esp_ieee802154::{rssi_to_lqi, Config, Ieee802154};
 
 // for now just re-export all
 pub use esp_openthread_sys as sys;
@@ -73,28 +82,14 @@ static RADIO: Mutex<RefCell<Option<&'static mut Ieee802154>>> = Mutex::new(RefCe
 
 static NETWORK_SETTINGS: Mutex<RefCell<Option<NetworkSettings>>> = Mutex::new(RefCell::new(None));
 
+static RADIO_SETTINGS: Mutex<RefCell<Option<Config>>> = Mutex::new(RefCell::new(None));
+
 static CHANGE_CALLBACK: Mutex<RefCell<Option<&'static mut (dyn FnMut(ChangedFlags) + Send)>>> =
     Mutex::new(RefCell::new(None));
 
-static mut RCV_FRAME_PSDU: [u8; OT_RADIO_FRAME_MAX_SIZE as usize] =
-    [0u8; OT_RADIO_FRAME_MAX_SIZE as usize];
-static mut RCV_FRAME: otRadioFrame = otRadioFrame {
-    mPsdu: unsafe { addr_of_mut!(RCV_FRAME_PSDU) as *mut u8 },
-    mLength: 0,
-    mChannel: 0,
-    mRadioType: 0,
-    mInfo: otRadioFrame__bindgen_ty_1 {
-        mRxInfo: otRadioFrame__bindgen_ty_1__bindgen_ty_2 {
-            mTimestamp: 0,
-            mAckFrameCounter: 0,
-            mAckKeyId: 0,
-            mRssi: 0,
-            mLqi: 0,
-            _bitfield_align_1: [0u8; 0],
-            _bitfield_1: __BindgenBitfieldUnit::new([0u8; 1]),
-        },
-    },
-};
+pub(crate) static mut CURRENT_INSTANCE: usize = 0;
+
+pub type Result<T, E = Error> = core::result::Result<T, E>;
 
 #[doc(hidden)]
 #[macro_export]
@@ -262,7 +257,6 @@ pub struct OperationalDataset {
 #[derive(Debug, Clone, Copy, Default)]
 struct NetworkSettings {
     promiscuous: bool,
-    rx_when_idle: bool,
     ext_address: u64,
     short_address: u16,
     pan_id: u16,
@@ -314,8 +308,22 @@ impl<'a> OpenThread<'a> {
         }
     }
 
+    pub fn set_radio_config(&mut self, config: Config) -> Result<()> {
+        critical_section::with(|cs| {
+            let mut radio = RADIO.borrow_ref_mut(cs);
+            let radio = radio.borrow_mut();
+
+            if let Some(radio) = radio.as_mut() {
+                radio.set_config(config)
+            }
+        });
+        set_radio_config(config);
+
+        Ok(())
+    }
+
     /// Sets the Active Operational Dataset
-    pub fn set_active_dataset(&mut self, dataset: OperationalDataset) -> Result<(), Error> {
+    pub fn set_active_dataset(&mut self, dataset: OperationalDataset) -> Result<()> {
         let mut raw_dataset = otOperationalDataset {
             mActiveTimestamp: otTimestamp {
                 mSeconds: 0,
@@ -499,15 +507,22 @@ impl<'a> OpenThread<'a> {
     }
 
     /// Brings the IPv6 interface up or down.
-    pub fn ipv6_set_enabled(&mut self, enabled: bool) -> Result<(), Error> {
+    pub fn ipv6_set_enabled(&mut self, enabled: bool) -> Result<()> {
         checked!(unsafe { otIp6SetEnabled(self.instance, enabled) })
     }
 
     /// This function starts Thread protocol operation.
     ///
     /// The interface must be up when calling this function.
-    pub fn thread_set_enabled(&mut self, enabled: bool) -> Result<(), Error> {
+    pub fn thread_set_enabled(&mut self, enabled: bool) -> Result<()> {
         checked!(unsafe { otThreadSetEnabled(self.instance, enabled) })
+    }
+
+    /// This function returns the device's EUI
+    ///
+    /// EUI is read from efuse
+    pub fn get_eui(&self, out: &mut [u8]) {
+        unsafe { otPlatRadioGetIeeeEui64(self.instance, out.as_mut_ptr()) }
     }
 
     /// Gets the list of IPv6 addresses assigned to the Thread interface.
@@ -516,9 +531,8 @@ impl<'a> OpenThread<'a> {
     ) -> heapless::Vec<NetworkInterfaceUnicastAddress, N> {
         let mut result = heapless::Vec::new();
         let mut addr = unsafe { otIp6GetUnicastAddresses(self.instance) };
-
         loop {
-            let a = unsafe { &*addr };
+            let a = unsafe { &(*(addr)) };
 
             let octets = unsafe { a.mAddress.mFields.m16 };
 
@@ -559,35 +573,7 @@ impl<'a> OpenThread<'a> {
     where
         'a: 's,
     {
-        let ot_socket = otUdpSocket {
-            mSockName: otSockAddr {
-                mAddress: otIp6Address {
-                    mFields: otIp6Address__bindgen_ty_1 { m32: [0, 0, 0, 0] },
-                },
-                mPort: 0,
-            },
-            mPeerName: otSockAddr {
-                mAddress: otIp6Address {
-                    mFields: otIp6Address__bindgen_ty_1 { m32: [0, 0, 0, 0] },
-                },
-                mPort: 0,
-            },
-            mHandler: Some(udp_receive_handler),
-            mContext: core::ptr::null_mut(),
-            mHandle: core::ptr::null_mut(),
-            mNext: core::ptr::null_mut(),
-        };
-
-        Ok(UdpSocket {
-            ot_socket,
-            ot: self,
-            receive_len: 0,
-            receive_from: [0u8; 16],
-            receive_port: 0,
-            max: BUFFER_SIZE,
-            _pinned: PhantomPinned::default(),
-            receive_buffer: [0u8; BUFFER_SIZE],
-        })
+        crate::net::udp::UdpSocket::get_udp_socket(self)
     }
 
     /// Run tasks
@@ -689,7 +675,7 @@ impl<'a> OpenThread<'a> {
         }
     }
 
-    pub fn set_child_timeout(&mut self, timeout: u32) -> Result<(), Error> {
+    pub fn set_child_timeout(&mut self, timeout: u32) -> Result<()> {
         unsafe { otThreadSetChildTimeout(self.instance, timeout) };
         Ok(())
     }
@@ -698,17 +684,16 @@ impl<'a> OpenThread<'a> {
         let role = unsafe { otThreadGetDeviceRole(self.instance) };
         role.into()
     }
-    
 }
 
 #[derive(Debug)]
 pub enum ThreadDeviceRole {
-    Disabled, 
+    Disabled,
     Detached,
     Child,
     Router,
     Leader,
-    Unknown
+    Unknown,
 }
 
 #[allow(non_upper_case_globals)]
@@ -720,7 +705,7 @@ impl From<otDeviceRole> for ThreadDeviceRole {
             otDeviceRole_OT_DEVICE_ROLE_CHILD => ThreadDeviceRole::Child,
             otDeviceRole_OT_DEVICE_ROLE_ROUTER => ThreadDeviceRole::Router,
             otDeviceRole_OT_DEVICE_ROLE_LEADER => ThreadDeviceRole::Leader,
-            _ => ThreadDeviceRole::Unknown
+            _ => ThreadDeviceRole::Unknown,
         }
     }
 }
@@ -730,8 +715,8 @@ impl core::fmt::Display for ThreadDeviceRole {
         match self {
             ThreadDeviceRole::Disabled => write!(f, "Disabled"),
             ThreadDeviceRole::Detached => write!(f, "Detached"),
-            ThreadDeviceRole::Child=> write!(f, "Child"),
-            ThreadDeviceRole::Router=> write!(f, "Router"),
+            ThreadDeviceRole::Child => write!(f, "Child"),
+            ThreadDeviceRole::Router => write!(f, "Router"),
             ThreadDeviceRole::Leader => write!(f, "Leader"),
             ThreadDeviceRole::Unknown => write!(f, "Unknown"),
         }
@@ -818,7 +803,7 @@ fn get_settings() -> NetworkSettings {
 
 fn set_settings(settings: NetworkSettings) {
     critical_section::with(|cs| {
-        log::info!(
+        log::debug!(
             "Setting settings to {:?}\nwere {:?}",
             settings,
             NETWORK_SETTINGS.borrow_ref(cs)
@@ -830,197 +815,35 @@ fn set_settings(settings: NetworkSettings) {
     });
 }
 
-/// A UdpSocket
-///
-/// To call functions on it you have to pin it.
-/// ```no_run
-/// let mut socket = openthread.get_udp_socket::<512>().unwrap();
-/// let mut socket = pin!(socket);
-/// socket.bind(1212).unwrap();
-/// ```
-pub struct UdpSocket<'s, 'n: 's, const BUFFER_SIZE: usize> {
-    ot_socket: otUdpSocket,
-    ot: &'s OpenThread<'n>,
-    receive_len: usize,
-    receive_from: [u8; 16],
-    receive_port: u16,
-    max: usize,
-    _pinned: PhantomPinned,
-    // must be last because the callback doesn't know about the actual const generic parameter
-    receive_buffer: [u8; BUFFER_SIZE],
+fn get_radio_config() -> Config {
+    critical_section::with(|cs| {
+        let mut settings = RADIO_SETTINGS.borrow_ref_mut(cs);
+        let settings = settings.borrow_mut();
+
+        if let Some(settings) = settings.as_mut() {
+            settings.clone()
+        } else {
+            log::error!("Generating default radio settings");
+            Config::default()
+        }
+    })
 }
 
-impl<'s, 'n: 's, const BUFFER_SIZE: usize> UdpSocket<'s, 'n, BUFFER_SIZE> {
-    /// Open and bind a UDP/IPv6 socket
-    pub fn bind(self: &mut Pin<&mut Self>, port: u16) -> Result<(), Error> {
-        let mut sock_addr = otSockAddr {
-            mAddress: otIp6Address {
-                mFields: otIp6Address__bindgen_ty_1 { m32: [0, 0, 0, 0] },
-            },
-            mPort: 0,
-        };
-        sock_addr.mPort = port;
-
-        unsafe {
-            checked!(otUdpOpen(
-                self.ot.instance,
-                &self.ot_socket as *const _ as *mut otUdpSocket,
-                Some(udp_receive_handler),
-                self.as_mut().get_unchecked_mut() as *mut _ as *mut crate::sys::c_types::c_void,
-            ))?;
-        }
-
-        unsafe {
-            checked!(otUdpBind(
-                self.ot.instance,
-                &self.ot_socket as *const _ as *mut otUdpSocket,
-                &mut sock_addr,
-                otNetifIdentifier_OT_NETIF_THREAD,
-            ))?;
-        }
-
-        Ok(())
-    }
-
-    /// Open a UDP/IPv6 socket
-    pub fn open(self: &mut Pin<&mut Self>, port: u16) -> Result<(), Error> {
-        let mut sock_addr = otSockAddr {
-            mAddress: otIp6Address {
-                mFields: otIp6Address__bindgen_ty_1 { m32: [0, 0, 0, 0] },
-            },
-            mPort: 0,
-        };
-        sock_addr.mPort = port;
-
-        unsafe {
-            checked!(otUdpOpen(
-                self.ot.instance,
-                &self.ot_socket as *const _ as *mut otUdpSocket,
-                Some(udp_receive_handler),
-                self.as_mut().get_unchecked_mut() as *mut _ as *mut crate::sys::c_types::c_void,
-            ))?;
-        }
-        Ok(())
-    }
-
-    /// Get latest data received on this socket
-    pub fn receive(
-        self: &mut Pin<&mut Self>,
-        data: &mut [u8],
-    ) -> Result<(usize, Ipv6Addr, u16), Error> {
-        critical_section::with(|_| {
-            let len = self.receive_len as usize;
-            if len == 0 {
-                Ok((0, Ipv6Addr::UNSPECIFIED, 0))
-            } else {
-                unsafe { self.as_mut().get_unchecked_mut() }.receive_len = 0;
-                data[..len].copy_from_slice(&self.receive_buffer[..len]);
-                let ip = Ipv6Addr::from(self.receive_from);
-                Ok((len, ip, self.receive_port))
-            }
-        })
-    }
-
-    /// Send data to the given peer
-    pub fn send(
-        self: &mut Pin<&mut Self>,
-        dst: Ipv6Addr,
-        port: u16,
-        data: &[u8],
-    ) -> Result<(), Error> {
-        let mut message_info = otMessageInfo {
-            mSockAddr: otIp6Address {
-                mFields: otIp6Address__bindgen_ty_1 { m32: [0, 0, 0, 0] },
-            },
-            mPeerAddr: otIp6Address {
-                mFields: otIp6Address__bindgen_ty_1 { m32: [0, 0, 0, 0] },
-            },
-            mSockPort: 0,
-            mPeerPort: 0,
-            mHopLimit: 0,
-            _bitfield_align_1: [0u8; 0],
-            _bitfield_1: __BindgenBitfieldUnit::new([0u8; 1]),
-        };
-        message_info.mPeerAddr.mFields.m8 = dst.octets();
-        message_info.mPeerPort = port;
-
-        let message = unsafe { otUdpNewMessage(self.ot.instance, core::ptr::null()) };
-        if message.is_null() {
-            return Err(Error::InternalError(0));
-        }
-
-        unsafe {
-            checked!(otMessageAppend(
-                message,
-                data.as_ptr() as *const c_void,
-                data.len() as u16
-            ))?;
-        }
-
-        unsafe {
-            let err = otUdpSend(
-                self.ot.instance,
-                &self.ot_socket as *const _ as *mut otUdpSocket,
-                message,
-                &mut message_info,
-            );
-
-            if err != otError_OT_ERROR_NONE && !message.is_null() {
-                otMessageFree(message);
-                return Err(Error::InternalError(err));
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Close a UDP/IPv6 socket
-    pub fn close(self: &mut Pin<&mut Self>) -> Result<(), Error> {
-        unsafe {
-            checked!(otUdpClose(
-                self.ot.instance,
-                &self.ot_socket as *const _ as *mut otUdpSocket,
-            ))?;
-        }
-
-        Ok(())
-    }
-
-    fn close_internal(&mut self) -> Result<(), Error> {
-        unsafe {
-            checked!(otUdpClose(
-                self.ot.instance,
-                &self.ot_socket as *const _ as *mut otUdpSocket,
-            ))?;
-        }
-
-        Ok(())
-    }
-}
-
-impl<'s, 'n: 's, const BUFFER_SIZE: usize> Drop for UdpSocket<'s, 'n, BUFFER_SIZE> {
-    fn drop(&mut self) {
-        self.close_internal().ok();
-    }
-}
-
-unsafe extern "C" fn udp_receive_handler(
-    context: *mut crate::sys::c_types::c_void,
-    message: *mut otMessage,
-    message_info: *const otMessageInfo,
-) {
-    let socket = context as *mut UdpSocket<1024>;
-    let len = u16::min((*socket).max as u16, otMessageGetLength(message));
-
-    critical_section::with(|_| {
-        otMessageRead(
-            message,
-            0,
-            &mut (*socket).receive_buffer as *mut _ as *mut crate::sys::c_types::c_void,
-            len,
+fn set_radio_config(settings: Config) {
+    critical_section::with(|cs| {
+        log::info!(
+            "RADIO settings to {:?}\nwere {:?}",
+            settings,
+            RADIO_SETTINGS.borrow_ref(cs)
         );
-        (*socket).receive_port = (*message_info).mPeerPort;
-        (*socket).receive_from = (*message_info).mPeerAddr.mFields.m8;
-        (*socket).receive_len = len as usize;
+        RADIO_SETTINGS
+            .borrow_ref_mut(cs)
+            .borrow_mut()
+            .replace(settings);
     });
+}
+
+mod tests {
+    // todo test for ChangeFlag as bits returning None
+    // per this log: WARN - change_callback otChangedFlags= 2147483648 would be None as flags
 }
