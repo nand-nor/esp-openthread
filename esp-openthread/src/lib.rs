@@ -24,6 +24,7 @@ use esp_hal::{
 };
 use esp_ieee802154::{rssi_to_lqi, Ieee802154};
 
+use esp_openthread_sys::bindings::{otDeviceRole_OT_DEVICE_ROLE_CHILD, otDeviceRole_OT_DEVICE_ROLE_DETACHED, otDeviceRole_OT_DEVICE_ROLE_DISABLED, otDeviceRole_OT_DEVICE_ROLE_LEADER, otDeviceRole_OT_DEVICE_ROLE_ROUTER};
 // for now just re-export all
 pub use esp_openthread_sys as sys;
 use no_std_net::Ipv6Addr;
@@ -598,7 +599,7 @@ impl<'a> OpenThread<'a> {
     /// Make sure to periodically call this function.
     pub fn run_tasklets(&self) {
         unsafe {
-            if otTaskletsArePending(self.instance) {
+            while otTaskletsArePending(self.instance) {
                 otTaskletsProcess(self.instance);
             }
         }
@@ -777,6 +778,54 @@ impl<'a> OpenThread<'a> {
     pub fn stop_srp_client(&mut self) -> Result<(), Error> {
         srp_client::srp_client_stop(self.instance);
         Ok(())
+    }
+    
+    pub fn set_child_timeout(&mut self, timeout: u32) -> Result<(), Error> {
+        unsafe { otThreadSetChildTimeout(self.instance, timeout) };
+        Ok(())
+    }
+
+    pub fn get_device_role(&self) -> ThreadDeviceRole {
+        let role = unsafe { otThreadGetDeviceRole(self.instance) };
+        role.into()
+    }
+    
+}
+
+#[derive(Debug)]
+pub enum ThreadDeviceRole {
+    Disabled, 
+    Detached,
+    Child,
+    Router,
+    Leader,
+    Unknown
+}
+
+#[allow(non_upper_case_globals)]
+impl From<otDeviceRole> for ThreadDeviceRole {
+    fn from(role: otDeviceRole) -> Self {
+        match role {
+            otDeviceRole_OT_DEVICE_ROLE_DISABLED => ThreadDeviceRole::Disabled,
+            otDeviceRole_OT_DEVICE_ROLE_DETACHED => ThreadDeviceRole::Detached,
+            otDeviceRole_OT_DEVICE_ROLE_CHILD => ThreadDeviceRole::Child,
+            otDeviceRole_OT_DEVICE_ROLE_ROUTER => ThreadDeviceRole::Router,
+            otDeviceRole_OT_DEVICE_ROLE_LEADER => ThreadDeviceRole::Leader,
+            _ => ThreadDeviceRole::Unknown
+        }
+    }
+}
+
+impl core::fmt::Display for ThreadDeviceRole {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            ThreadDeviceRole::Disabled => write!(f, "Disabled"),
+            ThreadDeviceRole::Detached => write!(f, "Detached"),
+            ThreadDeviceRole::Child=> write!(f, "Child"),
+            ThreadDeviceRole::Router=> write!(f, "Router"),
+            ThreadDeviceRole::Leader => write!(f, "Leader"),
+            ThreadDeviceRole::Unknown => write!(f, "Unknown"),
+        }
     }
 }
 
