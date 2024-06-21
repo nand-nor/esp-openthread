@@ -4,14 +4,17 @@ use esp_ieee802154::Config;
 use esp_openthread_sys::bindings::{
     __BindgenBitfieldUnit, otError, otError_OT_ERROR_NONE, otInstance, otPlatRadioTxDone,
     otPlatRadioTxStarted, otRadioFrame, otRadioFrame__bindgen_ty_1,
-    otRadioFrame__bindgen_ty_1__bindgen_ty_1, OT_RADIO_FRAME_MAX_SIZE, OT_RADIO_FRAME_MIN_SIZE,
+    otRadioFrame__bindgen_ty_1__bindgen_ty_1, otRadioFrame__bindgen_ty_1__bindgen_ty_2,
+    OT_RADIO_FRAME_MAX_SIZE, OT_RADIO_FRAME_MIN_SIZE,
 };
 
-use crate::{get_settings, platform::CURRENT_INSTANCE, set_settings, with_radio, NetworkSettings};
+use crate::{
+    get_radio_config, get_settings, set_radio_config, set_settings, with_radio, 
+    NetworkSettings, CURRENT_INSTANCE,
+};
 
-pub static mut PSDU: [u8; OT_RADIO_FRAME_MAX_SIZE as usize] =
-    [0u8; OT_RADIO_FRAME_MAX_SIZE as usize];
-pub static mut TRANSMIT_BUFFER: otRadioFrame = otRadioFrame {
+static mut PSDU: [u8; OT_RADIO_FRAME_MAX_SIZE as usize] = [0u8; OT_RADIO_FRAME_MAX_SIZE as usize];
+static mut TRANSMIT_BUFFER: otRadioFrame = otRadioFrame {
     mPsdu: unsafe { addr_of_mut!(PSDU) as *mut u8 },
     mLength: 0,
     mChannel: 0,
@@ -33,9 +36,9 @@ pub static mut TRANSMIT_BUFFER: otRadioFrame = otRadioFrame {
     },
 };
 
-pub static mut SENT_FRAME_PSDU: [u8; OT_RADIO_FRAME_MAX_SIZE as usize] =
+static mut SENT_FRAME_PSDU: [u8; OT_RADIO_FRAME_MAX_SIZE as usize] =
     [0u8; OT_RADIO_FRAME_MAX_SIZE as usize];
-static mut SENT_FRAME: otRadioFrame = otRadioFrame {
+pub(crate) static mut SENT_FRAME: otRadioFrame = otRadioFrame {
     mPsdu: unsafe { addr_of_mut!(SENT_FRAME_PSDU) as *mut u8 },
     mLength: 0,
     mChannel: 0,
@@ -57,7 +60,27 @@ static mut SENT_FRAME: otRadioFrame = otRadioFrame {
     },
 };
 
-pub static mut ACK_FRAME_PSDU: [u8; OT_RADIO_FRAME_MIN_SIZE as usize] = [0x2, 0x0, 0x0];
+pub(crate) static mut RCV_FRAME_PSDU: [u8; OT_RADIO_FRAME_MAX_SIZE as usize] =
+    [0u8; OT_RADIO_FRAME_MAX_SIZE as usize];
+pub(crate) static mut RCV_FRAME: otRadioFrame = otRadioFrame {
+    mPsdu: unsafe { addr_of_mut!(RCV_FRAME_PSDU) as *mut u8 },
+    mLength: 0,
+    mChannel: 0,
+    mRadioType: 0,
+    mInfo: otRadioFrame__bindgen_ty_1 {
+        mRxInfo: otRadioFrame__bindgen_ty_1__bindgen_ty_2 {
+            mTimestamp: 0,
+            mAckFrameCounter: 0,
+            mAckKeyId: 0,
+            mRssi: 0,
+            mLqi: 0,
+            _bitfield_align_1: [0u8; 0],
+            _bitfield_1: __BindgenBitfieldUnit::new([0u8; 1]),
+        },
+    },
+};
+
+static mut ACK_FRAME_PSDU: [u8; OT_RADIO_FRAME_MIN_SIZE as usize] = [0x2, 0x0, 0x0];
 static mut ACK_FRAME: otRadioFrame = otRadioFrame {
     mPsdu: unsafe { addr_of_mut!(ACK_FRAME_PSDU) as *mut u8 },
     mLength: OT_RADIO_FRAME_MIN_SIZE as _,
@@ -81,8 +104,10 @@ static mut ACK_FRAME: otRadioFrame = otRadioFrame {
 };
 
 #[no_mangle]
-pub extern "C" fn otPlatRadioGetIeeeEui64(_instance: *const otInstance, _out: *mut u8) {
-    todo!()
+pub extern "C" fn otPlatRadioGetIeeeEui64(_instance: *const otInstance, out: *mut u8) {
+    let mac = esp_hal::efuse::Efuse::get_mac_address();
+    let dest_slice = unsafe { core::slice::from_raw_parts_mut(out, 6) };
+    dest_slice[..6].copy_from_slice(&mac);
 }
 
 #[no_mangle]
@@ -122,18 +147,20 @@ pub extern "C" fn otPlatRadioSetPromiscuous(_instance: *const otInstance, enable
     });
 
     let settings = get_settings();
+    let mut config = get_radio_config();
+    config.promiscuous = enable;
+    let config = Config {
+        channel: settings.channel,
+        promiscuous: settings.promiscuous,
+        pan_id: Some(settings.pan_id),
+        short_addr: Some(settings.short_address),
+        ext_addr: Some(settings.ext_address),
+        ..config
+    };
+    set_radio_config(config);
+
     with_radio(|radio| {
-        radio.set_config(Config {
-            channel: settings.channel,
-            promiscuous: settings.promiscuous,
-            pan_id: Some(settings.pan_id),
-            short_addr: Some(settings.short_address),
-            ext_addr: Some(settings.ext_address),
-            rx_when_idle: settings.rx_when_idle,
-            auto_ack_rx: true,
-            auto_ack_tx: true,
-            ..Config::default()
-        });
+        radio.set_config(config);
     });
 }
 
@@ -178,18 +205,19 @@ pub extern "C" fn otPlatRadioSetExtendedAddress(instance: *const otInstance, add
     });
 
     let settings = get_settings();
+    let config = get_radio_config();
+    let config = Config {
+        channel: settings.channel,
+        promiscuous: settings.promiscuous,
+        pan_id: Some(settings.pan_id),
+        short_addr: Some(settings.short_address),
+        ext_addr: Some(ext_addr),
+        ..config
+    };
+    set_radio_config(config);
+
     with_radio(|radio| {
-        radio.set_config(Config {
-            channel: settings.channel,
-            promiscuous: settings.promiscuous,
-            pan_id: Some(settings.pan_id),
-            short_addr: Some(settings.short_address),
-            ext_addr: Some(settings.ext_address),
-            rx_when_idle: settings.rx_when_idle,
-            auto_ack_rx: true,
-            auto_ack_tx: true,
-            ..Config::default()
-        });
+        radio.set_config(config);
     });
 }
 
@@ -202,18 +230,20 @@ pub extern "C" fn otPlatRadioSetShortAddress(instance: *const otInstance, addres
     });
 
     let settings = get_settings();
+    let config = get_radio_config();
+
+    let config = Config {
+        channel: settings.channel,
+        promiscuous: settings.promiscuous,
+        pan_id: Some(settings.pan_id),
+        short_addr: Some(address),
+        ext_addr: Some(settings.ext_address),
+        ..config
+    };
+    set_radio_config(config);
+
     with_radio(|radio| {
-        radio.set_config(Config {
-            channel: settings.channel,
-            promiscuous: settings.promiscuous,
-            pan_id: Some(settings.pan_id),
-            short_addr: Some(settings.short_address),
-            ext_addr: Some(settings.ext_address),
-            rx_when_idle: settings.rx_when_idle,
-            auto_ack_rx: true,
-            auto_ack_tx: true,
-            ..Config::default()
-        });
+        radio.set_config(config);
     });
 }
 
@@ -226,18 +256,20 @@ pub extern "C" fn otPlatRadioSetPanId(_instance: *const otInstance, pan_id: u16)
     });
 
     let settings = get_settings();
+    let config = get_radio_config();
+
+    let config = Config {
+        channel: settings.channel,
+        promiscuous: settings.promiscuous,
+        pan_id: Some(pan_id),
+        short_addr: Some(settings.short_address),
+        ext_addr: Some(settings.ext_address),
+        ..config
+    };
+    set_radio_config(config);
+
     with_radio(|radio| {
-        radio.set_config(Config {
-            channel: settings.channel,
-            promiscuous: settings.promiscuous,
-            pan_id: Some(settings.pan_id),
-            short_addr: Some(settings.short_address),
-            ext_addr: Some(settings.ext_address),
-            rx_when_idle: settings.rx_when_idle,
-            auto_ack_rx: true,
-            auto_ack_tx: true,
-            ..Config::default()
-        });
+        radio.set_config(config);
     });
 }
 
@@ -258,19 +290,20 @@ pub extern "C" fn otPlatRadioTransmit(
     let settings = get_settings();
     log::info!("Settings {:x?}", settings);
 
-    with_radio(|radio| {
-        radio.set_config(Config {
-            channel: frame.mChannel,
-            promiscuous: settings.promiscuous,
-            pan_id: Some(settings.pan_id),
-            short_addr: Some(settings.short_address),
-            ext_addr: Some(settings.ext_address),
-            rx_when_idle: settings.rx_when_idle,
-            auto_ack_rx: true,
-            auto_ack_tx: true,
-            ..Config::default()
-        });
+    let config = get_radio_config();
 
+    let config = Config {
+        channel: frame.mChannel,
+        promiscuous: settings.promiscuous,
+        pan_id: Some(settings.pan_id),
+        short_addr: Some(settings.short_address),
+        ext_addr: Some(settings.ext_address),
+        ..config
+    };
+    set_radio_config(config);
+
+    with_radio(|radio| {
+        radio.set_config(config);
         radio.transmit_raw(data).ok();
     });
 
@@ -284,7 +317,6 @@ pub extern "C" fn otPlatRadioTransmit(
 
         otPlatRadioTxStarted(instance as *mut otInstance, core::mem::transmute(frame));
     }
-
     log::info!("TX done");
 
     otError_OT_ERROR_NONE
@@ -301,18 +333,20 @@ pub extern "C" fn otPlatRadioReceive(_instance: *mut otInstance, channel: u8) ->
         ..settings
     });
 
+    let config = get_radio_config();
+
+    let config = Config {
+        channel,
+        promiscuous: settings.promiscuous,
+        pan_id: Some(settings.pan_id),
+        short_addr: Some(settings.short_address),
+        ext_addr: Some(settings.ext_address),
+        ..config
+    };
+    set_radio_config(config);
+
     with_radio(|radio| {
-        radio.set_config(Config {
-            channel,
-            promiscuous: settings.promiscuous,
-            pan_id: Some(settings.pan_id),
-            short_addr: Some(settings.short_address),
-            ext_addr: Some(settings.ext_address),
-            rx_when_idle: settings.rx_when_idle,
-            auto_ack_rx: true,
-            auto_ack_tx: true,
-            ..Config::default()
-        });
+        radio.set_config(config);
         radio.start_receive();
     });
 
@@ -329,5 +363,11 @@ pub(crate) fn trigger_tx_done() {
             addr_of_mut!(ACK_FRAME),
             otError_OT_ERROR_NONE,
         );
-    }
+    };
+}
+
+#[no_mangle]
+pub extern "C" fn otPlatRadioIsEnabled(_instance: *mut otInstance) -> bool {
+    // todo
+    true
 }

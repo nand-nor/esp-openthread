@@ -5,8 +5,6 @@ use esp_openthread_sys::{
     c_types,
 };
 
-pub(crate) static mut CURRENT_INSTANCE: usize = 0;
-
 #[no_mangle]
 pub extern "C" fn otPlatReset(_instance: *const u8) -> otError {
     todo!()
