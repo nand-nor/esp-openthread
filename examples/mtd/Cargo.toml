@@ -1,24 +1,24 @@
 [package]
-name = "esp-openthread-examples"
+name = "mtd"
 version = "0.1.0"
-authors = ["bjoernQ <bjoern.quentin@mobile-j.de>"]
+authors = ["nand-nor <a13xandra.cliff0rd@gmail.com>"]
 edition = "2021"
-license = "MIT OR Apache-2.0"
+
 
 [profile.release]
 debug = true
 
 [dependencies]
-esp-hal = {version= "0.19.0", git = "https://github.com/esp-rs/esp-hal.git"}
-esp-backtrace = { version="0.13.0", git = "https://github.com/esp-rs/esp-hal.git", features = ["panic-handler", "exception-handler", "println"] }
-esp-println       = { version= "0.10.0", git = "https://github.com/esp-rs/esp-hal.git", features = ["log"] }
+esp-hal = {version= "0.18.0", git = "https://github.com/esp-rs/esp-hal.git"}
+esp-backtrace = { version="0.12.1", git = "https://github.com/esp-rs/esp-hal.git", features = ["panic-handler", "exception-handler", "println"] }
+esp-println       = { version= "0.9.1", git = "https://github.com/esp-rs/esp-hal.git", features = ["log"] }
 esp-ieee802154 = {version= "0.1.0", git = "https://github.com/esp-rs/esp-hal.git"}
 log = "0.4.21"
 heapless = "0.8.0"
 no-std-net = "0.6.0"
 critical-section = "1.1.0"
 
-esp-openthread = { path = "../esp-openthread" }
+esp-openthread = { path = "../../esp-openthread" }
 
 [features]
 esp32c6 = [ "esp-hal/esp32c6", "esp-ieee802154/esp32c6", "esp-openthread/esp32c6", "esp-backtrace/esp32c6", "esp-println/esp32c6" ]
