@@ -26,7 +26,7 @@ impl core::fmt::Debug for otIp6Address {
     }
 }
 
-// TODO 
+// TODO
 impl core::fmt::Debug for otIp6Address__bindgen_ty_1 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let ptr = unsafe { core::ptr::addr_of!(self.m16) };
