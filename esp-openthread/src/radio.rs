@@ -9,8 +9,8 @@ use esp_openthread_sys::bindings::{
 };
 
 use crate::{
-    get_radio_config, get_settings, set_radio_config, set_settings, with_radio, 
-    NetworkSettings, CURRENT_INSTANCE,
+    get_radio_config, get_settings, set_radio_config, set_settings, with_radio, NetworkSettings,
+    CURRENT_INSTANCE,
 };
 
 static mut PSDU: [u8; OT_RADIO_FRAME_MAX_SIZE as usize] = [0u8; OT_RADIO_FRAME_MAX_SIZE as usize];
@@ -111,6 +111,14 @@ pub extern "C" fn otPlatRadioGetIeeeEui64(_instance: *const otInstance, out: *mu
 }
 
 #[no_mangle]
+pub extern "C" fn otPlatRadioGetTransmitPower(_instance: *mut otInstance, power: *mut i8) -> otError {
+    let config = get_radio_config();
+    unsafe { *power = config.txpower };
+    otError_OT_ERROR_NONE
+}
+
+
+#[no_mangle]
 pub extern "C" fn otPlatRadioGetCaps(instance: *const otInstance) -> u8 {
     log::info!("otPlatRadioGetCaps {:p}", instance);
     0 // Radio supports no capability. See OT_RADIO_CAPS_*
@@ -166,14 +174,22 @@ pub extern "C" fn otPlatRadioSetPromiscuous(_instance: *const otInstance, enable
 
 #[no_mangle]
 pub extern "C" fn otPlatRadioGetRssi(_instance: *const otInstance) -> i8 {
-    log::error!("otPlatRadioGetRssi unimplemented");
-    33
+    log::trace!("otPlatRadioGetRssi reporting last rssi from RCV_fRAME");
+
+    let rssi = unsafe { RCV_FRAME.mInfo.mRxInfo.mRssi };
+    // If no rcv frame has set rssi yet then use a fake value instead of 0
+    if rssi == 0 { 
+        33
+    } else {
+        rssi
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn otPlatRadioGetReceiveSensitivity(_instance: *const otInstance) -> i8 {
-    log::error!("otPlatRadioGetReceiveSensitivity unimplemented");
-    -33
+    log::trace!("otPlatRadioGetReceiveSensitivity reporting const defined in ESP-IDF");
+    // from https://github.com/espressif/esp-idf/blob/master/components/openthread/src/port/esp_openthread_radio.c#L35
+    -120
 }
 
 #[no_mangle]
