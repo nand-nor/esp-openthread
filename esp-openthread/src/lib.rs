@@ -108,6 +108,7 @@ pub enum Error {
     InternalError(u32),
 }
 
+// TODO: Make these generated as part of bindgen task?
 bitflags! {
     /// Specific state/configuration that has changed
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
