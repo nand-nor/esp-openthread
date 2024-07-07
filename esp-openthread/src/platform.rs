@@ -1,9 +1,7 @@
 // mostly stubbing out the platform stuff for now
 
 use esp_openthread_sys::{
-    bindings::{
-        otError, otError_OT_ERROR_NOT_CAPABLE, otLogLevel, otLogRegion, otInstance
-    },
+    bindings::{otError, otError_OT_ERROR_NOT_CAPABLE, otInstance, otLogLevel, otLogRegion},
     c_types,
 };
 

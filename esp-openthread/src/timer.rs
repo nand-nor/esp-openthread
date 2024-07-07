@@ -8,6 +8,9 @@ use esp_openthread_sys::bindings::{
     otError, otError_OT_ERROR_NONE, otInstance, otPlatAlarmMilliFired,
 };
 
+use core::cell::RefCell;
+use critical_section::Mutex;
+
 use crate::CURRENT_INSTANCE;
 
 const TICKS_PER_SECOND: u64 = 16_000_000;
