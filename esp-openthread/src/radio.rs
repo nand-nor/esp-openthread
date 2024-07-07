@@ -111,12 +111,14 @@ pub extern "C" fn otPlatRadioGetIeeeEui64(_instance: *const otInstance, out: *mu
 }
 
 #[no_mangle]
-pub extern "C" fn otPlatRadioGetTransmitPower(_instance: *mut otInstance, power: *mut i8) -> otError {
+pub extern "C" fn otPlatRadioGetTransmitPower(
+    _instance: *mut otInstance,
+    power: *mut i8,
+) -> otError {
     let config = get_radio_config();
     unsafe { *power = config.txpower };
     otError_OT_ERROR_NONE
 }
-
 
 #[no_mangle]
 pub extern "C" fn otPlatRadioGetCaps(instance: *const otInstance) -> u8 {
@@ -178,7 +180,7 @@ pub extern "C" fn otPlatRadioGetRssi(_instance: *const otInstance) -> i8 {
 
     let rssi = unsafe { RCV_FRAME.mInfo.mRxInfo.mRssi };
     // If no rcv frame has set rssi yet then use a fake value instead of 0
-    if rssi == 0 { 
+    if rssi == 0 {
         33
     } else {
         rssi
@@ -189,7 +191,7 @@ pub extern "C" fn otPlatRadioGetRssi(_instance: *const otInstance) -> i8 {
 pub extern "C" fn otPlatRadioGetReceiveSensitivity(_instance: *const otInstance) -> i8 {
     log::trace!("otPlatRadioGetReceiveSensitivity reporting const defined in ESP-IDF");
     // from https://github.com/espressif/esp-idf/blob/master/components/openthread/src/port/esp_openthread_radio.c#L35
-    -120
+    -33 //120
 }
 
 #[no_mangle]
@@ -304,7 +306,7 @@ pub extern "C" fn otPlatRadioTransmit(
     );
 
     let settings = get_settings();
-    log::info!("Settings {:x?}", settings);
+    log::debug!("Settings {:x?}", settings);
 
     let config = get_radio_config();
 
@@ -333,16 +335,16 @@ pub extern "C" fn otPlatRadioTransmit(
 
         otPlatRadioTxStarted(instance as *mut otInstance, core::mem::transmute(frame));
     }
-    log::info!("TX done");
+    log::debug!("TX done");
 
     otError_OT_ERROR_NONE
 }
 
 #[no_mangle]
 pub extern "C" fn otPlatRadioReceive(_instance: *mut otInstance, channel: u8) -> otError {
-    log::info!("otPlatRadioReceive channel = {channel}");
+    log::debug!("otPlatRadioReceive channel = {channel}");
     let settings: NetworkSettings = get_settings();
-    log::info!("Settings {:x?}", settings);
+    log::debug!("Settings {:x?}", settings);
 
     set_settings(NetworkSettings {
         channel,
@@ -370,7 +372,7 @@ pub extern "C" fn otPlatRadioReceive(_instance: *mut otInstance, channel: u8) ->
 }
 
 pub(crate) fn trigger_tx_done() {
-    log::warn!("trigger_tx_done");
+    log::info!("trigger_tx_done");
 
     unsafe {
         otPlatRadioTxDone(

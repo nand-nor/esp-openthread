@@ -1,4 +1,3 @@
-use crate::platform::CURRENT_INSTANCE;
 use core::cell::RefCell;
 use critical_section::Mutex;
 use esp_hal::{

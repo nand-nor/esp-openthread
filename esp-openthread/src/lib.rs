@@ -19,6 +19,11 @@ mod platform;
 mod radio;
 mod timer;
 
+use esp_openthread_sys::bindings::{
+    otDeviceRole_OT_DEVICE_ROLE_CHILD, otDeviceRole_OT_DEVICE_ROLE_DETACHED,
+    otDeviceRole_OT_DEVICE_ROLE_DISABLED, otDeviceRole_OT_DEVICE_ROLE_LEADER,
+    otDeviceRole_OT_DEVICE_ROLE_ROUTER,
+};
 pub use net::udp::{udp_receive_handler, UdpSocket};
 
 use core::{borrow::BorrowMut, cell::RefCell, marker::PhantomData, ptr::addr_of_mut};
@@ -33,37 +38,31 @@ use esp_ieee802154::{rssi_to_lqi, Config, Ieee802154};
 
 // for now just re-export all
 pub use esp_openthread_sys as sys;
-use no_std_net::Ipv6Addr;
-use sys::{
-    bindings::{
-        __BindgenBitfieldUnit, otChangedFlags, otDatasetSetActive, otError_OT_ERROR_NONE,
-        otExtendedPanId, otInstance, otInstanceInitSingle, otIp6Address,
-        otIp6Address__bindgen_ty_1, otIp6GetUnicastAddresses, otIp6SetEnabled, otMeshLocalPrefix,
-        otMessage, otMessageAppend, otMessageFree, otMessageGetLength, otMessageInfo,
-        otMessageRead, otNetifIdentifier_OT_NETIF_THREAD, otNetworkKey, otNetworkName,
-        otOperationalDataset, otOperationalDatasetComponents, otPlatRadioEnergyScanDone,
-        otPlatRadioReceiveDone, otPskc, otRadioFrame, otRadioFrame__bindgen_ty_1,
-        otRadioFrame__bindgen_ty_1__bindgen_ty_2, otSecurityPolicy, otSetStateChangedCallback,
-        otSockAddr, otTaskletsArePending, otTaskletsProcess, otThreadSetEnabled, otTimestamp,
-        otUdpBind, otUdpClose, otUdpNewMessage, otUdpOpen, otUdpSend, otUdpSocket,
-        OT_CHANGED_ACTIVE_DATASET, OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL,
-        OT_CHANGED_COMMISSIONER_STATE, OT_CHANGED_IP6_ADDRESS_ADDED,
-        OT_CHANGED_IP6_ADDRESS_REMOVED, OT_CHANGED_IP6_MULTICAST_SUBSCRIBED,
-        OT_CHANGED_IP6_MULTICAST_UNSUBSCRIBED, OT_CHANGED_JOINER_STATE,
-        OT_CHANGED_NAT64_TRANSLATOR_STATE, OT_CHANGED_NETWORK_KEY, OT_CHANGED_PARENT_LINK_QUALITY,
-        OT_CHANGED_PENDING_DATASET, OT_CHANGED_PSKC, OT_CHANGED_SECURITY_POLICY,
-        OT_CHANGED_SUPPORTED_CHANNEL_MASK, OT_CHANGED_THREAD_BACKBONE_ROUTER_LOCAL,
-        OT_CHANGED_THREAD_BACKBONE_ROUTER_STATE, OT_CHANGED_THREAD_CHANNEL,
-        OT_CHANGED_THREAD_CHILD_ADDED, OT_CHANGED_THREAD_CHILD_REMOVED,
-        OT_CHANGED_THREAD_EXT_PANID, OT_CHANGED_THREAD_KEY_SEQUENCE_COUNTER,
-        OT_CHANGED_THREAD_LL_ADDR, OT_CHANGED_THREAD_ML_ADDR, OT_CHANGED_THREAD_NETDATA,
-        OT_CHANGED_THREAD_NETIF_STATE, OT_CHANGED_THREAD_NETWORK_NAME, OT_CHANGED_THREAD_PANID,
-        OT_CHANGED_THREAD_PARTITION_ID, OT_CHANGED_THREAD_RLOC_ADDED,
-        OT_CHANGED_THREAD_RLOC_REMOVED, OT_CHANGED_THREAD_ROLE, OT_NETWORK_NAME_MAX_SIZE,
-        OT_RADIO_FRAME_MAX_SIZE,
-    },
-    c_types::c_void,
+
+use sys::bindings::{
+    otChangedFlags, otDatasetSetActive, otDeviceRole, otError_OT_ERROR_NONE, otExtendedPanId,
+    otInstance, otInstanceInitSingle, otIp6GetUnicastAddresses, otIp6SetEnabled, otLinkModeConfig,
+    otMeshLocalPrefix, otNetworkKey, otNetworkName, otOperationalDataset,
+    otOperationalDatasetComponents, otPlatRadioEnergyScanDone, otPlatRadioGetIeeeEui64,
+    otPlatRadioReceiveDone, otPskc, otSecurityPolicy, otSetStateChangedCallback,
+    otTaskletsArePending, otTaskletsProcess, otThreadGetDeviceRole, otThreadGetLinkMode,
+    otThreadSetChildTimeout, otThreadSetEnabled, otThreadSetLinkMode, otTimestamp,
+    OT_CHANGED_ACTIVE_DATASET, OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL,
+    OT_CHANGED_COMMISSIONER_STATE, OT_CHANGED_IP6_ADDRESS_ADDED, OT_CHANGED_IP6_ADDRESS_REMOVED,
+    OT_CHANGED_IP6_MULTICAST_SUBSCRIBED, OT_CHANGED_IP6_MULTICAST_UNSUBSCRIBED,
+    OT_CHANGED_JOINER_STATE, OT_CHANGED_NAT64_TRANSLATOR_STATE, OT_CHANGED_NETWORK_KEY,
+    OT_CHANGED_PARENT_LINK_QUALITY, OT_CHANGED_PENDING_DATASET, OT_CHANGED_PSKC,
+    OT_CHANGED_SECURITY_POLICY, OT_CHANGED_SUPPORTED_CHANNEL_MASK,
+    OT_CHANGED_THREAD_BACKBONE_ROUTER_LOCAL, OT_CHANGED_THREAD_BACKBONE_ROUTER_STATE,
+    OT_CHANGED_THREAD_CHANNEL, OT_CHANGED_THREAD_CHILD_ADDED, OT_CHANGED_THREAD_CHILD_REMOVED,
+    OT_CHANGED_THREAD_EXT_PANID, OT_CHANGED_THREAD_KEY_SEQUENCE_COUNTER, OT_CHANGED_THREAD_LL_ADDR,
+    OT_CHANGED_THREAD_ML_ADDR, OT_CHANGED_THREAD_NETDATA, OT_CHANGED_THREAD_NETIF_STATE,
+    OT_CHANGED_THREAD_NETWORK_NAME, OT_CHANGED_THREAD_PANID, OT_CHANGED_THREAD_PARTITION_ID,
+    OT_CHANGED_THREAD_RLOC_ADDED, OT_CHANGED_THREAD_RLOC_REMOVED, OT_CHANGED_THREAD_ROLE,
+    OT_NETWORK_NAME_MAX_SIZE,
 };
+
+use crate::radio::{RCV_FRAME, RCV_FRAME_PSDU};
 
 /// https://github.com/espressif/esp-idf/blob/release/v5.3/components/ieee802154/private_include/esp_ieee802154_frame.h#L20
 const IEEE802154_FRAME_TYPE_OFFSET: usize = 1;
@@ -582,7 +581,7 @@ impl<'a> OpenThread<'a> {
     /// Make sure to periodically call this function.
     pub fn run_tasklets(&self) {
         unsafe {
-            while otTaskletsArePending(self.instance) {
+            if otTaskletsArePending(self.instance) {
                 otTaskletsProcess(self.instance);
             }
         }
@@ -679,6 +678,27 @@ impl<'a> OpenThread<'a> {
     pub fn set_child_timeout(&mut self, timeout: u32) -> Result<()> {
         unsafe { otThreadSetChildTimeout(self.instance, timeout) };
         Ok(())
+    }
+
+    /// When device is MTD, device type should be false, full network data should be false,
+    /// and rx on when idle should be set accordingly (likely false depending on other config)
+    pub fn set_link_mode(
+        &mut self,
+        rx_on_when_idle: bool,
+        device_type: bool,
+        network_data: bool,
+    ) -> Result<()> {
+        let mut link_mode = self.get_link_mode();
+        link_mode.set_mRxOnWhenIdle(rx_on_when_idle);
+        link_mode.set_mDeviceType(device_type);
+        link_mode.set_mNetworkData(network_data);
+
+        unsafe { otThreadSetLinkMode(self.instance, link_mode) };
+        Ok(())
+    }
+
+    pub fn get_link_mode(&self) -> otLinkModeConfig {
+        unsafe { otThreadGetLinkMode(self.instance) }
     }
 
     pub fn get_device_role(&self) -> ThreadDeviceRole {
@@ -796,7 +816,7 @@ fn get_settings() -> NetworkSettings {
         if let Some(settings) = settings.as_mut() {
             settings.clone()
         } else {
-            log::error!("Generating default settings");
+            log::warn!("Generating default settings");
             NetworkSettings::default()
         }
     })
@@ -824,7 +844,7 @@ fn get_radio_config() -> Config {
         if let Some(settings) = settings.as_mut() {
             settings.clone()
         } else {
-            log::error!("Generating default radio settings");
+            log::warn!("Generating default radio settings");
             Config::default()
         }
     })
@@ -832,7 +852,7 @@ fn get_radio_config() -> Config {
 
 fn set_radio_config(settings: Config) {
     critical_section::with(|cs| {
-        log::info!(
+        log::debug!(
             "RADIO settings to {:?}\nwere {:?}",
             settings,
             RADIO_SETTINGS.borrow_ref(cs)
@@ -842,9 +862,4 @@ fn set_radio_config(settings: Config) {
             .borrow_mut()
             .replace(settings);
     });
-}
-
-mod tests {
-    // todo test for ChangeFlag as bits returning None
-    // per this log: WARN - change_callback otChangedFlags= 2147483648 would be None as flags
 }
