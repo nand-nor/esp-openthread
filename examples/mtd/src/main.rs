@@ -5,12 +5,13 @@
 
 use core::cell::RefCell;
 use core::pin::pin;
-
+use static_cell::StaticCell;
 use critical_section::Mutex;
+
 use esp_backtrace as _;
 use esp_hal::{
-    clock::ClockControl, gpio::Io, peripherals::Peripherals, prelude::*, rng::Rng,
-    system::SystemControl, timer::systimer,
+    clock::ClockControl, gpio::Io, peripherals::Peripherals, prelude::*, rng::Rng, system::SystemControl,
+    timer::systimer::{Alarm, SystemTimer, SpecificUnit, FrozenUnit}, 
 };
 use esp_ieee802154::{Config, Ieee802154};
 use esp_openthread::{NetworkInterfaceUnicastAddress, OperationalDataset, ThreadTimestamp};
@@ -31,13 +32,19 @@ fn main() -> ! {
 
     println!("Initializing");
 
-    let systimer = systimer::SystemTimer::new(peripherals.SYSTIMER);
     let radio = peripherals.IEEE802154;
     let mut ieee802154 = Ieee802154::new(radio, &mut peripherals.RADIO_CLK);
 
+    // init timer for otPlatAlarm
+    let systimer = SystemTimer::new(peripherals.SYSTIMER);
+    static UNIT0: StaticCell<SpecificUnit<'static, 0>> = StaticCell::new();
+    let unit0 = UNIT0.init(systimer.unit0);
+    let frozen_unit = FrozenUnit::new(unit0);
+    let alarm = Alarm::new(systimer.comparator0, &frozen_unit);
+
     let mut openthread = esp_openthread::OpenThread::new(
         &mut ieee802154,
-        systimer.alarm0,
+        alarm,
         Rng::new(peripherals.RNG),
     );
 
@@ -106,9 +113,9 @@ fn main() -> ! {
 
     // Configure RMT peripheral globally
     #[cfg(not(feature = "esp32h2"))]
-    let rmt = esp_hal::rmt::Rmt::new(peripherals.RMT, 80.MHz(), &clocks, None).unwrap();
+    let rmt = esp_hal::rmt::Rmt::new(peripherals.RMT, 80.MHz(), &clocks).unwrap();
     #[cfg(feature = "esp32h2")]
-    let rmt = esp_hal::rmt::Rmt::new(peripherals.RMT, 32.MHz(), &clocks, None).unwrap();
+    let rmt = esp_hal::rmt::Rmt::new(peripherals.RMT, 32.MHz(), &clocks).unwrap();
 
     let rmt_buffer = smartLedBuffer!(1);
     let mut led = SmartLedsAdapter::new(rmt.channel0, led_pin, rmt_buffer, &clocks);

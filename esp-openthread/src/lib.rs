@@ -21,6 +21,11 @@ mod radio;
 mod srp_client;
 mod timer;
 
+use esp_openthread_sys::bindings::{
+    otDeviceRole_OT_DEVICE_ROLE_CHILD, otDeviceRole_OT_DEVICE_ROLE_DETACHED,
+    otDeviceRole_OT_DEVICE_ROLE_DISABLED, otDeviceRole_OT_DEVICE_ROLE_LEADER,
+    otDeviceRole_OT_DEVICE_ROLE_ROUTER,
+};
 pub use net::udp::{udp_receive_handler, UdpSocket};
 
 use core::{borrow::BorrowMut, cell::RefCell, marker::PhantomData, ptr::addr_of_mut};
@@ -33,10 +38,9 @@ use esp_hal::{
 };
 use esp_ieee802154::{rssi_to_lqi, Config, Ieee802154};
 
-use esp_openthread_sys::bindings::{otDeviceRole_OT_DEVICE_ROLE_CHILD, otDeviceRole_OT_DEVICE_ROLE_DETACHED, otDeviceRole_OT_DEVICE_ROLE_DISABLED, otDeviceRole_OT_DEVICE_ROLE_LEADER, otDeviceRole_OT_DEVICE_ROLE_ROUTER};
 // for now just re-export all
 pub use esp_openthread_sys as sys;
-use no_std_net::Ipv6Addr;
+
 use sys::{
     bindings::{
         __BindgenBitfieldUnit, otChangedFlags, otDatasetSetActive, otError_OT_ERROR_NONE,
@@ -63,11 +67,14 @@ use sys::{
         OT_CHANGED_THREAD_NETIF_STATE, OT_CHANGED_THREAD_NETWORK_NAME, OT_CHANGED_THREAD_PANID,
         OT_CHANGED_THREAD_PARTITION_ID, OT_CHANGED_THREAD_RLOC_ADDED,
         OT_CHANGED_THREAD_RLOC_REMOVED, OT_CHANGED_THREAD_ROLE, OT_NETWORK_NAME_MAX_SIZE,
-        OT_RADIO_FRAME_MAX_SIZE,
+        OT_RADIO_FRAME_MAX_SIZE, otDeviceRole, otThreadSetLinkMode, otLinkModeConfig,
+        otThreadGetDeviceRole, otThreadGetLinkMode,otThreadSetChildTimeout, otPlatRadioGetIeeeEui64
         //otSrpClientAutoStartCallback, otSrpClientCallback
     },
     c_types::c_void,
 };
+
+use crate::radio::{RCV_FRAME, RCV_FRAME_PSDU};
 
 /// https://github.com/espressif/esp-idf/blob/release/v5.3/components/ieee802154/private_include/esp_ieee802154_frame.h#L20
 const IEEE802154_FRAME_TYPE_OFFSET: usize = 1;
@@ -586,7 +593,7 @@ impl<'a> OpenThread<'a> {
     /// Make sure to periodically call this function.
     pub fn run_tasklets(&self) {
         unsafe {
-            while otTaskletsArePending(self.instance) {
+            if otTaskletsArePending(self.instance) {
                 otTaskletsProcess(self.instance);
             }
         }
@@ -772,6 +779,27 @@ impl<'a> OpenThread<'a> {
         Ok(())
     }
 
+    /// When device is MTD, device type should be false, full network data should be false,
+    /// and rx on when idle should be set accordingly (likely false depending on other config)
+    pub fn set_link_mode(
+        &mut self,
+        rx_on_when_idle: bool,
+        device_type: bool,
+        network_data: bool,
+    ) -> Result<()> {
+        let mut link_mode = self.get_link_mode();
+        link_mode.set_mRxOnWhenIdle(rx_on_when_idle);
+        link_mode.set_mDeviceType(device_type);
+        link_mode.set_mNetworkData(network_data);
+
+        unsafe { otThreadSetLinkMode(self.instance, link_mode) };
+        Ok(())
+    }
+
+    pub fn get_link_mode(&self) -> otLinkModeConfig {
+        unsafe { otThreadGetLinkMode(self.instance) }
+    }
+
     pub fn get_device_role(&self) -> ThreadDeviceRole {
         let role = unsafe { otThreadGetDeviceRole(self.instance) };
         role.into()
@@ -887,7 +915,7 @@ fn get_settings() -> NetworkSettings {
         if let Some(settings) = settings.as_mut() {
             settings.clone()
         } else {
-            log::error!("Generating default settings");
+            log::warn!("Generating default settings");
             NetworkSettings::default()
         }
     })
@@ -915,7 +943,7 @@ fn get_radio_config() -> Config {
         if let Some(settings) = settings.as_mut() {
             settings.clone()
         } else {
-            log::error!("Generating default radio settings");
+            log::warn!("Generating default radio settings");
             Config::default()
         }
     })
@@ -923,7 +951,7 @@ fn get_radio_config() -> Config {
 
 fn set_radio_config(settings: Config) {
     critical_section::with(|cs| {
-        log::info!(
+        log::debug!(
             "RADIO settings to {:?}\nwere {:?}",
             settings,
             RADIO_SETTINGS.borrow_ref(cs)
@@ -933,9 +961,4 @@ fn set_radio_config(settings: Config) {
             .borrow_mut()
             .replace(settings);
     });
-}
-
-mod tests {
-    // todo test for ChangeFlag as bits returning None
-    // per this log: WARN - change_callback otChangedFlags= 2147483648 would be None as flags
 }
