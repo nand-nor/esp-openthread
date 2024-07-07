@@ -35,12 +35,13 @@ use sys::bindings::{
     otDeviceRole_OT_DEVICE_ROLE_DETACHED, otDeviceRole_OT_DEVICE_ROLE_DISABLED,
     otDeviceRole_OT_DEVICE_ROLE_LEADER, otDeviceRole_OT_DEVICE_ROLE_ROUTER, otError_OT_ERROR_NONE,
     otExtendedPanId, otInstance, otInstanceInitSingle, otIp6GetUnicastAddresses, otIp6SetEnabled,
-    otMeshLocalPrefix, otNetworkKey, otNetworkName, otOperationalDataset,
+    otLinkModeConfig, otMeshLocalPrefix, otNetworkKey, otNetworkName, otOperationalDataset,
     otOperationalDatasetComponents, otPlatRadioGetIeeeEui64, otPlatRadioReceiveDone, otPskc,
     otSecurityPolicy, otSetStateChangedCallback, otTaskletsArePending, otTaskletsProcess,
-    otThreadGetDeviceRole, otThreadSetChildTimeout, otThreadSetEnabled, otTimestamp,
-    OT_CHANGED_ACTIVE_DATASET, OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL,
-    OT_CHANGED_COMMISSIONER_STATE, OT_CHANGED_IP6_ADDRESS_ADDED, OT_CHANGED_IP6_ADDRESS_REMOVED,
+    otThreadGetDeviceRole, otThreadGetLinkMode, otThreadSetChildTimeout, otThreadSetEnabled,
+    otThreadSetLinkMode, otTimestamp, OT_CHANGED_ACTIVE_DATASET,
+    OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL, OT_CHANGED_COMMISSIONER_STATE,
+    OT_CHANGED_IP6_ADDRESS_ADDED, OT_CHANGED_IP6_ADDRESS_REMOVED,
     OT_CHANGED_IP6_MULTICAST_SUBSCRIBED, OT_CHANGED_IP6_MULTICAST_UNSUBSCRIBED,
     OT_CHANGED_JOINER_STATE, OT_CHANGED_NAT64_TRANSLATOR_STATE, OT_CHANGED_NETWORK_KEY,
     OT_CHANGED_PARENT_LINK_QUALITY, OT_CHANGED_PENDING_DATASET, OT_CHANGED_PSKC,
@@ -562,7 +563,7 @@ impl<'a> OpenThread<'a> {
     /// Make sure to periodically call this function.
     pub fn run_tasklets(&self) {
         unsafe {
-            while otTaskletsArePending(self.instance) {
+            if otTaskletsArePending(self.instance) {
                 otTaskletsProcess(self.instance);
             }
         }
@@ -599,6 +600,30 @@ impl<'a> OpenThread<'a> {
     pub fn set_child_timeout(&mut self, timeout: u32) -> Result<()> {
         unsafe { otThreadSetChildTimeout(self.instance, timeout) };
         Ok(())
+    }
+
+    /// When device is MTD, device type should be false, full network data should be false,
+    /// and rx on when idle should be set accordingly (likely false depending on other config)
+    pub fn set_link_mode(
+        &mut self,
+        rx_on_when_idle: bool,
+        device_type: bool,
+        network_data: bool,
+    ) -> Result<()> {
+        let mut link_mode = self.get_link_mode();
+        link_mode.set_mRxOnWhenIdle(rx_on_when_idle);
+        link_mode.set_mDeviceType(device_type);
+        link_mode.set_mNetworkData(network_data);
+
+        unsafe { otThreadSetLinkMode(self.instance, link_mode) };
+        Ok(())
+    }
+
+
+    pub fn get_link_mode(
+        &self,
+    ) -> otLinkModeConfig {
+        unsafe { otThreadGetLinkMode(self.instance) }
     }
 
     pub fn get_device_role(&self) -> ThreadDeviceRole {
@@ -700,7 +725,7 @@ fn get_settings() -> NetworkSettings {
         if let Some(settings) = settings.as_mut() {
             settings.clone()
         } else {
-            log::error!("Generating default settings");
+            log::warn!("Generating default settings");
             NetworkSettings::default()
         }
     })
@@ -728,7 +753,7 @@ fn get_radio_config() -> Config {
         if let Some(settings) = settings.as_mut() {
             settings.clone()
         } else {
-            log::error!("Generating default radio settings");
+            log::warn!("Generating default radio settings");
             Config::default()
         }
     })
@@ -736,7 +761,7 @@ fn get_radio_config() -> Config {
 
 fn set_radio_config(settings: Config) {
     critical_section::with(|cs| {
-        log::info!(
+        log::debug!(
             "RADIO settings to {:?}\nwere {:?}",
             settings,
             RADIO_SETTINGS.borrow_ref(cs)
@@ -746,9 +771,4 @@ fn set_radio_config(settings: Config) {
             .borrow_mut()
             .replace(settings);
     });
-}
-
-mod tests {
-    // todo test for ChangeFlag as bits returning None
-    // per this log: WARN - change_callback otChangedFlags= 2147483648 would be None as flags
 }
