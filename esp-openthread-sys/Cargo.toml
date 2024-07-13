@@ -7,3 +7,8 @@ edition = "2021"
 
 [build-dependencies]
 anyhow = "1.0.75"
+
+[features]
+default = []
+mtd = []
+ftd = []

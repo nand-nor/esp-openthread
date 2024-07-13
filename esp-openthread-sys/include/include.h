@@ -9,3 +9,13 @@
 #include "openthread/platform/entropy.h"
 #include "openthread/platform/settings.h"
 #include "openthread/platform/logging.h"
+
+#include "openthread/netdata.h"
+#include "openthread/error.h"
+#include "openthread/ip6.h"
+#include "openthread/link.h"
+#include "openthread/message.h"
+#include "openthread/platform/messagepool.h"
+#include "openthread/icmp6.h"
+
+#include "openthread/dataset.h"

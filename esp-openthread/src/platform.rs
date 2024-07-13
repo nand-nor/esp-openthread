@@ -26,6 +26,11 @@ pub extern "C" fn otPlatLogHandleLevelChanged(_log_level: otLogLevel) {
 }
 
 #[no_mangle]
+pub extern "C" fn otPlatRadioEnableSrcMatch(_instance: *mut otInstance, _enable: bool) {
+    todo!()
+}
+
+#[no_mangle]
 pub extern "C" fn otInstanceResetToBootloader(_instance: *const otInstance) -> otError {
     otError_OT_ERROR_NOT_CAPABLE
 }

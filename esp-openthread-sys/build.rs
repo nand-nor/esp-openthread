@@ -14,18 +14,14 @@ fn main() -> Result<()> {
     copy_file(&out, "../libs/libmbedcrypto.a", "libmbedcrypto.a")?;
     copy_file(&out, "../libs/libmbedtls.a", "libmbedtls.a")?;
     copy_file(&out, "../libs/libmbedx509.a", "libmbedx509.a")?;
+
     copy_file(
         &out,
-        "../libs/libopenthread-cli-mtd.a",
-        "libopenthread-cli-mtd.a",
+        "../libs/libopenthread-spinel-rcp.a",
+        "libopenthread-spinel-rcp.a",
     )?;
-    copy_file(
-        &out,
-        "../libs/libopenthread-ncp-mtd.a",
-        "libopenthread-ncp-mtd.a",
-    )?;
+    copy_file(&out, "../libs/libplatform.a", "libplatform.a")?;
     copy_file(&out, "../libs/libopenthread-hdlc.a", "libopenthread-hdlc.a")?;
-    copy_file(&out, "../libs/libopenthread-mtd.a", "libopenthread-mtd.a")?;
     copy_file(
         &out,
         "../libs/libopenthread-spinel-ncp.a",
@@ -41,22 +37,43 @@ fn main() -> Result<()> {
         "../libs/libopenthread-platform.a",
         "libopenthread-platform.a",
     )?;
-    copy_file(&out, "../libs/libtcplp-mtd.a", "libtcplp-mtd.a")?;
-    copy_file(
-        &out,
-        "../libs/libopenthread-spinel-rcp.a",
-        "libopenthread-spinel-rcp.a",
-    )?;
-    copy_file(&out, "../libs/libplatform.a", "libplatform.a")?;
+
+    #[cfg(not(feature = "ftd"))]
+    {
+        copy_file(&out, "../libs/libtcplp-mtd.a", "libtcplp-mtd.a")?;
+        copy_file(
+            &out,
+            "../libs/libopenthread-cli-mtd.a",
+            "libopenthread-cli-mtd.a",
+        )?;
+        copy_file(
+            &out,
+            "../libs/libopenthread-ncp-mtd.a",
+            "libopenthread-ncp-mtd.a",
+        )?;
+        copy_file(&out, "../libs/libopenthread-mtd.a", "libopenthread-mtd.a")?;
+    }
+
+    #[cfg(feature = "ftd")]
+    {
+        copy_file(&out, "../libs/libtcplp-ftd.a", "libtcplp-ftd.a")?;
+        copy_file(
+            &out,
+            "../libs/libopenthread-cli-ftd.a",
+            "libopenthread-cli-ftd.a",
+        )?;
+        copy_file(
+            &out,
+            "../libs/libopenthread-ncp-ftd.a",
+            "libopenthread-ncp-ftd.a",
+        )?;
+        copy_file(&out, "../libs/libopenthread-ftd.a", "libopenthread-ftd.a")?;
+    }
 
     println!("cargo:rustc-link-lib={}", "mbedtls");
     println!("cargo:rustc-link-lib={}", "mbedx509");
     println!("cargo:rustc-link-lib={}", "mbedcrypto");
-
-    println!("cargo:rustc-link-lib={}", "openthread-cli-mtd");
     println!("cargo:rustc-link-lib={}", "openthread-hdlc");
-    println!("cargo:rustc-link-lib={}", "openthread-mtd");
-    println!("cargo:rustc-link-lib={}", "openthread-ncp-mtd");
     println!(
         "cargo:rustc-link-lib={}",
         "openthread-platform-utils-static"
@@ -64,8 +81,22 @@ fn main() -> Result<()> {
     println!("cargo:rustc-link-lib={}", "openthread-platform");
     println!("cargo:rustc-link-lib={}", "openthread-spinel-ncp");
     println!("cargo:rustc-link-lib={}", "openthread-spinel-rcp");
-    println!("cargo:rustc-link-lib={}", "tcplp-mtd");
     println!("cargo:rustc-link-lib={}", "platform");
+
+    #[cfg(not(feature = "ftd"))]
+    {
+        println!("cargo:rustc-link-lib={}", "openthread-cli-mtd");
+        println!("cargo:rustc-link-lib={}", "openthread-mtd");
+        println!("cargo:rustc-link-lib={}", "openthread-ncp-mtd");
+        println!("cargo:rustc-link-lib={}", "tcplp-mtd");
+    }
+    #[cfg(feature = "ftd")]
+    {
+        println!("cargo:rustc-link-lib={}", "openthread-cli-ftd");
+        println!("cargo:rustc-link-lib={}", "openthread-ftd");
+        println!("cargo:rustc-link-lib={}", "openthread-ncp-ftd");
+        println!("cargo:rustc-link-lib={}", "tcplp-ftd");
+    }
 
     println!("cargo:rustc-link-search={}", out.display());
 

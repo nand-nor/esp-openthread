@@ -26,7 +26,7 @@ build()
     cd "${builddir}"
 
     cmake -GNinja \
-        -DOT_FTD=OFF \
+        -DOT_FTD=ON \
         -DOT_MTD=ON \
         -DOT_RCP=OFF \
         -DOT_APP_CLI=OFF \

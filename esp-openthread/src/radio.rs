@@ -185,7 +185,7 @@ pub extern "C" fn otPlatRadioGetRssi(_instance: *const otInstance) -> i8 {
 pub extern "C" fn otPlatRadioGetReceiveSensitivity(_instance: *const otInstance) -> i8 {
     log::trace!("otPlatRadioGetReceiveSensitivity reporting const defined in ESP-IDF");
     // from https://github.com/espressif/esp-idf/blob/master/components/openthread/src/port/esp_openthread_radio.c#L35
-    -33//120
+    -33 //120
 }
 
 #[no_mangle]

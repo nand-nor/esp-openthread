@@ -313,6 +313,11 @@ pub const OT_NETWORK_MAX_ROUTER_ID: u32 = 62;
 pub const OT_NEIGHBOR_INFO_ITERATOR_INIT: u32 = 0;
 pub const OT_JOINER_ADVDATA_MAX_LENGTH: u32 = 64;
 pub const OT_DURATION_STRING_SIZE: u32 = 21;
+pub const OT_NETWORK_DATA_ITERATOR_INIT: u32 = 0;
+pub const OT_SERVICE_DATA_MAX_SIZE: u32 = 252;
+pub const OT_SERVER_DATA_MAX_SIZE: u32 = 248;
+pub const OT_ICMP6_HEADER_DATA_SIZE: u32 = 4;
+pub const OT_ICMP6_ROUTER_ADVERT_MIN_SIZE: u32 = 16;
 pub type wchar_t = crate::c_types::c_int;
 #[repr(C)]
 #[repr(align(16))]
@@ -6144,5 +6149,576 @@ extern "C" {
 extern "C" {
     #[doc = " Removes all settings from the setting store.\n\n Deletes all settings from the settings\n store, resetting it to its initial factory state.\n\n @param[in] aInstance  The OpenThread instance structure."]
     pub fn otPlatSettingsWipe(aInstance: *mut otInstance);
+}
+pub type otNetworkDataIterator = u32;
+#[doc = " Represents a Border Router configuration."]
+#[repr(C)]
+#[repr(align(4))]
+#[derive(Copy, Clone)]
+pub struct otBorderRouterConfig {
+    #[doc = "< The IPv6 prefix."]
+    pub mPrefix: otIp6Prefix,
+    pub _bitfield_align_1: [u8; 0],
+    pub _bitfield_1: __BindgenBitfieldUnit<[u8; 2usize]>,
+    #[doc = "< The border router's RLOC16 (value ignored on config add)."]
+    pub mRloc16: u16,
+}
+impl otBorderRouterConfig {
+    #[inline]
+    pub fn mPreference(&self) -> crate::c_types::c_int {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(0usize, 2u8) as u32) }
+    }
+    #[inline]
+    pub fn set_mPreference(&mut self, val: crate::c_types::c_int) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(0usize, 2u8, val as u64)
+        }
+    }
+    #[inline]
+    pub fn mPreferred(&self) -> bool {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(2usize, 1u8) as u8) }
+    }
+    #[inline]
+    pub fn set_mPreferred(&mut self, val: bool) {
+        unsafe {
+            let val: u8 = ::core::mem::transmute(val);
+            self._bitfield_1.set(2usize, 1u8, val as u64)
+        }
+    }
+    #[inline]
+    pub fn mSlaac(&self) -> bool {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(3usize, 1u8) as u8) }
+    }
+    #[inline]
+    pub fn set_mSlaac(&mut self, val: bool) {
+        unsafe {
+            let val: u8 = ::core::mem::transmute(val);
+            self._bitfield_1.set(3usize, 1u8, val as u64)
+        }
+    }
+    #[inline]
+    pub fn mDhcp(&self) -> bool {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(4usize, 1u8) as u8) }
+    }
+    #[inline]
+    pub fn set_mDhcp(&mut self, val: bool) {
+        unsafe {
+            let val: u8 = ::core::mem::transmute(val);
+            self._bitfield_1.set(4usize, 1u8, val as u64)
+        }
+    }
+    #[inline]
+    pub fn mConfigure(&self) -> bool {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(5usize, 1u8) as u8) }
+    }
+    #[inline]
+    pub fn set_mConfigure(&mut self, val: bool) {
+        unsafe {
+            let val: u8 = ::core::mem::transmute(val);
+            self._bitfield_1.set(5usize, 1u8, val as u64)
+        }
+    }
+    #[inline]
+    pub fn mDefaultRoute(&self) -> bool {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(6usize, 1u8) as u8) }
+    }
+    #[inline]
+    pub fn set_mDefaultRoute(&mut self, val: bool) {
+        unsafe {
+            let val: u8 = ::core::mem::transmute(val);
+            self._bitfield_1.set(6usize, 1u8, val as u64)
+        }
+    }
+    #[inline]
+    pub fn mOnMesh(&self) -> bool {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(7usize, 1u8) as u8) }
+    }
+    #[inline]
+    pub fn set_mOnMesh(&mut self, val: bool) {
+        unsafe {
+            let val: u8 = ::core::mem::transmute(val);
+            self._bitfield_1.set(7usize, 1u8, val as u64)
+        }
+    }
+    #[inline]
+    pub fn mStable(&self) -> bool {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(8usize, 1u8) as u8) }
+    }
+    #[inline]
+    pub fn set_mStable(&mut self, val: bool) {
+        unsafe {
+            let val: u8 = ::core::mem::transmute(val);
+            self._bitfield_1.set(8usize, 1u8, val as u64)
+        }
+    }
+    #[inline]
+    pub fn mNdDns(&self) -> bool {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(9usize, 1u8) as u8) }
+    }
+    #[inline]
+    pub fn set_mNdDns(&mut self, val: bool) {
+        unsafe {
+            let val: u8 = ::core::mem::transmute(val);
+            self._bitfield_1.set(9usize, 1u8, val as u64)
+        }
+    }
+    #[inline]
+    pub fn mDp(&self) -> bool {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(10usize, 1u8) as u8) }
+    }
+    #[inline]
+    pub fn set_mDp(&mut self, val: bool) {
+        unsafe {
+            let val: u8 = ::core::mem::transmute(val);
+            self._bitfield_1.set(10usize, 1u8, val as u64)
+        }
+    }
+    #[inline]
+    pub fn new_bitfield_1(
+        mPreference: crate::c_types::c_int,
+        mPreferred: bool,
+        mSlaac: bool,
+        mDhcp: bool,
+        mConfigure: bool,
+        mDefaultRoute: bool,
+        mOnMesh: bool,
+        mStable: bool,
+        mNdDns: bool,
+        mDp: bool,
+    ) -> __BindgenBitfieldUnit<[u8; 2usize]> {
+        let mut __bindgen_bitfield_unit: __BindgenBitfieldUnit<[u8; 2usize]> = Default::default();
+        __bindgen_bitfield_unit.set(0usize, 2u8, {
+            let mPreference: u32 = unsafe { ::core::mem::transmute(mPreference) };
+            mPreference as u64
+        });
+        __bindgen_bitfield_unit.set(2usize, 1u8, {
+            let mPreferred: u8 = unsafe { ::core::mem::transmute(mPreferred) };
+            mPreferred as u64
+        });
+        __bindgen_bitfield_unit.set(3usize, 1u8, {
+            let mSlaac: u8 = unsafe { ::core::mem::transmute(mSlaac) };
+            mSlaac as u64
+        });
+        __bindgen_bitfield_unit.set(4usize, 1u8, {
+            let mDhcp: u8 = unsafe { ::core::mem::transmute(mDhcp) };
+            mDhcp as u64
+        });
+        __bindgen_bitfield_unit.set(5usize, 1u8, {
+            let mConfigure: u8 = unsafe { ::core::mem::transmute(mConfigure) };
+            mConfigure as u64
+        });
+        __bindgen_bitfield_unit.set(6usize, 1u8, {
+            let mDefaultRoute: u8 = unsafe { ::core::mem::transmute(mDefaultRoute) };
+            mDefaultRoute as u64
+        });
+        __bindgen_bitfield_unit.set(7usize, 1u8, {
+            let mOnMesh: u8 = unsafe { ::core::mem::transmute(mOnMesh) };
+            mOnMesh as u64
+        });
+        __bindgen_bitfield_unit.set(8usize, 1u8, {
+            let mStable: u8 = unsafe { ::core::mem::transmute(mStable) };
+            mStable as u64
+        });
+        __bindgen_bitfield_unit.set(9usize, 1u8, {
+            let mNdDns: u8 = unsafe { ::core::mem::transmute(mNdDns) };
+            mNdDns as u64
+        });
+        __bindgen_bitfield_unit.set(10usize, 1u8, {
+            let mDp: u8 = unsafe { ::core::mem::transmute(mDp) };
+            mDp as u64
+        });
+        __bindgen_bitfield_unit
+    }
+}
+#[doc = " Represents 6LoWPAN Context ID information associated with a prefix in Network Data.\n"]
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct otLowpanContextInfo {
+    #[doc = "< The 6LoWPAN Context ID."]
+    pub mContextId: u8,
+    #[doc = "< The compress flag."]
+    pub mCompressFlag: bool,
+    #[doc = "< The associated IPv6 prefix."]
+    pub mPrefix: otIp6Prefix,
+}
+#[doc = " Represents an External Route configuration.\n"]
+#[repr(C)]
+#[repr(align(4))]
+#[derive(Copy, Clone)]
+pub struct otExternalRouteConfig {
+    #[doc = "< The IPv6 prefix."]
+    pub mPrefix: otIp6Prefix,
+    #[doc = "< The border router's RLOC16 (value ignored on config add)."]
+    pub mRloc16: u16,
+    pub _bitfield_align_1: [u8; 0],
+    pub _bitfield_1: __BindgenBitfieldUnit<[u8; 1usize]>,
+    pub __bindgen_padding_0: [u8; 3usize],
+}
+impl otExternalRouteConfig {
+    #[inline]
+    pub fn mPreference(&self) -> crate::c_types::c_int {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(0usize, 2u8) as u32) }
+    }
+    #[inline]
+    pub fn set_mPreference(&mut self, val: crate::c_types::c_int) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(0usize, 2u8, val as u64)
+        }
+    }
+    #[inline]
+    pub fn mNat64(&self) -> bool {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(2usize, 1u8) as u8) }
+    }
+    #[inline]
+    pub fn set_mNat64(&mut self, val: bool) {
+        unsafe {
+            let val: u8 = ::core::mem::transmute(val);
+            self._bitfield_1.set(2usize, 1u8, val as u64)
+        }
+    }
+    #[inline]
+    pub fn mStable(&self) -> bool {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(3usize, 1u8) as u8) }
+    }
+    #[inline]
+    pub fn set_mStable(&mut self, val: bool) {
+        unsafe {
+            let val: u8 = ::core::mem::transmute(val);
+            self._bitfield_1.set(3usize, 1u8, val as u64)
+        }
+    }
+    #[inline]
+    pub fn mNextHopIsThisDevice(&self) -> bool {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(4usize, 1u8) as u8) }
+    }
+    #[inline]
+    pub fn set_mNextHopIsThisDevice(&mut self, val: bool) {
+        unsafe {
+            let val: u8 = ::core::mem::transmute(val);
+            self._bitfield_1.set(4usize, 1u8, val as u64)
+        }
+    }
+    #[inline]
+    pub fn mAdvPio(&self) -> bool {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(5usize, 1u8) as u8) }
+    }
+    #[inline]
+    pub fn set_mAdvPio(&mut self, val: bool) {
+        unsafe {
+            let val: u8 = ::core::mem::transmute(val);
+            self._bitfield_1.set(5usize, 1u8, val as u64)
+        }
+    }
+    #[inline]
+    pub fn new_bitfield_1(
+        mPreference: crate::c_types::c_int,
+        mNat64: bool,
+        mStable: bool,
+        mNextHopIsThisDevice: bool,
+        mAdvPio: bool,
+    ) -> __BindgenBitfieldUnit<[u8; 1usize]> {
+        let mut __bindgen_bitfield_unit: __BindgenBitfieldUnit<[u8; 1usize]> = Default::default();
+        __bindgen_bitfield_unit.set(0usize, 2u8, {
+            let mPreference: u32 = unsafe { ::core::mem::transmute(mPreference) };
+            mPreference as u64
+        });
+        __bindgen_bitfield_unit.set(2usize, 1u8, {
+            let mNat64: u8 = unsafe { ::core::mem::transmute(mNat64) };
+            mNat64 as u64
+        });
+        __bindgen_bitfield_unit.set(3usize, 1u8, {
+            let mStable: u8 = unsafe { ::core::mem::transmute(mStable) };
+            mStable as u64
+        });
+        __bindgen_bitfield_unit.set(4usize, 1u8, {
+            let mNextHopIsThisDevice: u8 = unsafe { ::core::mem::transmute(mNextHopIsThisDevice) };
+            mNextHopIsThisDevice as u64
+        });
+        __bindgen_bitfield_unit.set(5usize, 1u8, {
+            let mAdvPio: u8 = unsafe { ::core::mem::transmute(mAdvPio) };
+            mAdvPio as u64
+        });
+        __bindgen_bitfield_unit
+    }
+}
+#[doc = "< Low route preference."]
+pub const otRoutePreference_OT_ROUTE_PREFERENCE_LOW: otRoutePreference = -1;
+#[doc = "< Medium route preference."]
+pub const otRoutePreference_OT_ROUTE_PREFERENCE_MED: otRoutePreference = 0;
+#[doc = "< High route preference."]
+pub const otRoutePreference_OT_ROUTE_PREFERENCE_HIGH: otRoutePreference = 1;
+#[doc = " Defines valid values for `mPreference` in `otExternalRouteConfig` and `otBorderRouterConfig`.\n"]
+pub type otRoutePreference = crate::c_types::c_int;
+#[doc = " Represents a Server configuration.\n"]
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct otServerConfig {
+    pub _bitfield_align_1: [u8; 0],
+    pub _bitfield_1: __BindgenBitfieldUnit<[u8; 1usize]>,
+    #[doc = "< Length of server data."]
+    pub mServerDataLength: u8,
+    #[doc = "< Server data bytes."]
+    pub mServerData: [u8; 248usize],
+    #[doc = "< The Server RLOC16."]
+    pub mRloc16: u16,
+}
+impl otServerConfig {
+    #[inline]
+    pub fn mStable(&self) -> bool {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(0usize, 1u8) as u8) }
+    }
+    #[inline]
+    pub fn set_mStable(&mut self, val: bool) {
+        unsafe {
+            let val: u8 = ::core::mem::transmute(val);
+            self._bitfield_1.set(0usize, 1u8, val as u64)
+        }
+    }
+    #[inline]
+    pub fn new_bitfield_1(mStable: bool) -> __BindgenBitfieldUnit<[u8; 1usize]> {
+        let mut __bindgen_bitfield_unit: __BindgenBitfieldUnit<[u8; 1usize]> = Default::default();
+        __bindgen_bitfield_unit.set(0usize, 1u8, {
+            let mStable: u8 = unsafe { ::core::mem::transmute(mStable) };
+            mStable as u64
+        });
+        __bindgen_bitfield_unit
+    }
+}
+#[doc = " Represents a Service configuration.\n"]
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct otServiceConfig {
+    #[doc = "< Service ID (when iterating over the  Network Data)."]
+    pub mServiceId: u8,
+    #[doc = "< IANA Enterprise Number."]
+    pub mEnterpriseNumber: u32,
+    #[doc = "< Length of service data."]
+    pub mServiceDataLength: u8,
+    #[doc = "< Service data bytes."]
+    pub mServiceData: [u8; 252usize],
+    #[doc = "< The Server configuration."]
+    pub mServerConfig: otServerConfig,
+}
+extern "C" {
+    #[doc = " Provide full or stable copy of the Partition's Thread Network Data.\n\n @param[in]      aInstance    A pointer to an OpenThread instance.\n @param[in]      aStable      TRUE when copying the stable version, FALSE when copying the full version.\n @param[out]     aData        A pointer to the data buffer.\n @param[in,out]  aDataLength  On entry, size of the data buffer pointed to by @p aData.\n                              On exit, number of copied bytes.\n\n @retval OT_ERROR_NONE    Successfully copied the Thread Network Data into @p aData and updated @p aDataLength.\n @retval OT_ERROR_NO_BUFS Not enough space in @p aData to fully copy the Thread Network Data.\n"]
+    pub fn otNetDataGet(
+        aInstance: *mut otInstance,
+        aStable: bool,
+        aData: *mut u8,
+        aDataLength: *mut u8,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Get the current length (number of bytes) of Partition's Thread Network Data.\n\n @param[in] aInstance    A pointer to an OpenThread instance.\n\n @return The length of the Network Data.\n"]
+    pub fn otNetDataGetLength(aInstance: *mut otInstance) -> u8;
+}
+extern "C" {
+    #[doc = " Get the maximum observed length of the Thread Network Data since OT stack initialization or since the last call to\n `otNetDataResetMaxLength()`.\n\n @param[in] aInstance    A pointer to an OpenThread instance.\n\n @return The maximum length of the Network Data (high water mark for Network Data length).\n"]
+    pub fn otNetDataGetMaxLength(aInstance: *mut otInstance) -> u8;
+}
+extern "C" {
+    #[doc = " Reset the tracked maximum length of the Thread Network Data.\n\n @param[in] aInstance    A pointer to an OpenThread instance.\n\n @sa otNetDataGetMaxLength\n"]
+    pub fn otNetDataResetMaxLength(aInstance: *mut otInstance);
+}
+extern "C" {
+    #[doc = " Get the next On Mesh Prefix in the partition's Network Data.\n\n @param[in]      aInstance  A pointer to an OpenThread instance.\n @param[in,out]  aIterator  A pointer to the Network Data iterator context. To get the first on-mesh entry\nit should be set to OT_NETWORK_DATA_ITERATOR_INIT.\n @param[out]     aConfig    A pointer to where the On Mesh Prefix information will be placed.\n\n @retval OT_ERROR_NONE       Successfully found the next On Mesh prefix.\n @retval OT_ERROR_NOT_FOUND  No subsequent On Mesh prefix exists in the Thread Network Data.\n"]
+    pub fn otNetDataGetNextOnMeshPrefix(
+        aInstance: *mut otInstance,
+        aIterator: *mut otNetworkDataIterator,
+        aConfig: *mut otBorderRouterConfig,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Get the next external route in the partition's Network Data.\n\n @param[in]      aInstance  A pointer to an OpenThread instance.\n @param[in,out]  aIterator  A pointer to the Network Data iterator context. To get the first external route entry\nit should be set to OT_NETWORK_DATA_ITERATOR_INIT.\n @param[out]     aConfig    A pointer to where the External Route information will be placed.\n\n @retval OT_ERROR_NONE       Successfully found the next External Route.\n @retval OT_ERROR_NOT_FOUND  No subsequent external route entry exists in the Thread Network Data.\n"]
+    pub fn otNetDataGetNextRoute(
+        aInstance: *mut otInstance,
+        aIterator: *mut otNetworkDataIterator,
+        aConfig: *mut otExternalRouteConfig,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Get the next service in the partition's Network Data.\n\n @param[in]      aInstance  A pointer to an OpenThread instance.\n @param[in,out]  aIterator  A pointer to the Network Data iterator context. To get the first service entry\nit should be set to OT_NETWORK_DATA_ITERATOR_INIT.\n @param[out]     aConfig    A pointer to where the service information will be placed.\n\n @retval OT_ERROR_NONE       Successfully found the next service.\n @retval OT_ERROR_NOT_FOUND  No subsequent service exists in the partition's Network Data.\n"]
+    pub fn otNetDataGetNextService(
+        aInstance: *mut otInstance,
+        aIterator: *mut otNetworkDataIterator,
+        aConfig: *mut otServiceConfig,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Get the next 6LoWPAN Context ID info in the partition's Network Data.\n\n @param[in]      aInstance     A pointer to an OpenThread instance.\n @param[in,out]  aIterator     A pointer to the Network Data iterator. To get the first service entry\nit should be set to OT_NETWORK_DATA_ITERATOR_INIT.\n @param[out]     aContextInfo  A pointer to where the retrieved 6LoWPAN Context ID information will be placed.\n\n @retval OT_ERROR_NONE       Successfully found the next 6LoWPAN Context ID info.\n @retval OT_ERROR_NOT_FOUND  No subsequent 6LoWPAN Context info exists in the partition's Network Data.\n"]
+    pub fn otNetDataGetNextLowpanContextInfo(
+        aInstance: *mut otInstance,
+        aIterator: *mut otNetworkDataIterator,
+        aContextInfo: *mut otLowpanContextInfo,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Gets the Commissioning Dataset from the partition's Network Data.\n\n @param[in]  aInstance   A pointer to the OpenThread instance.\n @param[out] aDataset    A pointer to a `otCommissioningDataset` to populate.\n"]
+    pub fn otNetDataGetCommissioningDataset(
+        aInstance: *mut otInstance,
+        aDataset: *mut otCommissioningDataset,
+    );
+}
+extern "C" {
+    #[doc = " Get the Network Data Version.\n\n @param[in]  aInstance A pointer to an OpenThread instance.\n\n @returns The Network Data Version.\n"]
+    pub fn otNetDataGetVersion(aInstance: *mut otInstance) -> u8;
+}
+extern "C" {
+    #[doc = " Get the Stable Network Data Version.\n\n @param[in]  aInstance A pointer to an OpenThread instance.\n\n @returns The Stable Network Data Version.\n"]
+    pub fn otNetDataGetStableVersion(aInstance: *mut otInstance) -> u8;
+}
+extern "C" {
+    #[doc = " Check if the steering data includes a Joiner.\n\n @param[in]  aInstance          A pointer to an OpenThread instance.\n @param[in]  aEui64             A pointer to the Joiner's IEEE EUI-64.\n\n @retval OT_ERROR_NONE          @p aEui64 is included in the steering data.\n @retval OT_ERROR_INVALID_STATE No steering data present.\n @retval OT_ERROR_NOT_FOUND     @p aEui64 is not included in the steering data.\n"]
+    pub fn otNetDataSteeringDataCheckJoiner(
+        aInstance: *mut otInstance,
+        aEui64: *const otExtAddress,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Check if the steering data includes a Joiner with a given discerner value.\n\n @param[in]  aInstance          A pointer to an OpenThread instance.\n @param[in]  aDiscerner         A pointer to the Joiner Discerner.\n\n @retval OT_ERROR_NONE          @p aDiscerner is included in the steering data.\n @retval OT_ERROR_INVALID_STATE No steering data present.\n @retval OT_ERROR_NOT_FOUND     @p aDiscerner is not included in the steering data.\n"]
+    pub fn otNetDataSteeringDataCheckJoinerWithDiscerner(
+        aInstance: *mut otInstance,
+        aDiscerner: *const otJoinerDiscerner,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Check whether a given Prefix can act as a valid OMR prefix and also the Leader's Network Data contains this prefix.\n\n @param[in]  aInstance  A pointer to an OpenThread instance.\n @param[in]  aPrefix    A pointer to the IPv6 prefix.\n\n @returns  Whether @p aPrefix is a valid OMR prefix and Leader's Network Data contains the OMR prefix @p aPrefix.\n\n @note This API is only available when `OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE` is used.\n"]
+    pub fn otNetDataContainsOmrPrefix(
+        aInstance: *mut otInstance,
+        aPrefix: *const otIp6Prefix,
+    ) -> bool;
+}
+#[doc = " Represents an OpenThread message buffer.\n"]
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct otMessageBuffer {
+    #[doc = "< Pointer to the next buffer."]
+    pub mNext: *mut otMessageBuffer,
+}
+extern "C" {
+    #[doc = " Initialize the platform implemented message pool.\n\n Is used when `OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT` is enabled.\n\n @param[in] aInstance            A pointer to the OpenThread instance.\n @param[in] aMinNumFreeBuffers   An uint16 containing the minimum number of free buffers desired by OpenThread.\n @param[in] aBufferSize          The size in bytes of a buffer object.\n"]
+    pub fn otPlatMessagePoolInit(
+        aInstance: *mut otInstance,
+        aMinNumFreeBuffers: u16,
+        aBufferSize: usize,
+    );
+}
+extern "C" {
+    #[doc = " Allocate a buffer from the platform managed buffer pool.\n\n Is used when `OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT` is enabled.\n\n The returned buffer instance MUST have at least `aBufferSize` bytes (as specified in `otPlatMessagePoolInit()`).\n\n @param[in] aInstance            A pointer to the OpenThread instance.\n\n @returns A pointer to the buffer or NULL if no buffers are available.\n"]
+    pub fn otPlatMessagePoolNew(aInstance: *mut otInstance) -> *mut otMessageBuffer;
+}
+extern "C" {
+    #[doc = " Is used to free a buffer back to the platform managed buffer pool.\n\n Is used when `OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT` is enabled.\n\n @param[in]  aInstance  A pointer to the OpenThread instance.\n @param[in]  aBuffer    The buffer to free.\n"]
+    pub fn otPlatMessagePoolFree(aInstance: *mut otInstance, aBuffer: *mut otMessageBuffer);
+}
+extern "C" {
+    #[doc = " Get the number of free buffers.\n\n Is used when `OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT` is enabled.\n\n @param[in]  aInstance  A pointer to the OpenThread instance.\n\n @returns The number of buffers currently free and available to OpenThread.\n"]
+    pub fn otPlatMessagePoolNumFreeBuffers(aInstance: *mut otInstance) -> u16;
+}
+#[doc = "< Destination Unreachable"]
+pub const otIcmp6Type_OT_ICMP6_TYPE_DST_UNREACH: otIcmp6Type = 1;
+#[doc = "< Packet To Big"]
+pub const otIcmp6Type_OT_ICMP6_TYPE_PACKET_TO_BIG: otIcmp6Type = 2;
+#[doc = "< Time Exceeded"]
+pub const otIcmp6Type_OT_ICMP6_TYPE_TIME_EXCEEDED: otIcmp6Type = 3;
+#[doc = "< Parameter Problem"]
+pub const otIcmp6Type_OT_ICMP6_TYPE_PARAMETER_PROBLEM: otIcmp6Type = 4;
+#[doc = "< Echo Request"]
+pub const otIcmp6Type_OT_ICMP6_TYPE_ECHO_REQUEST: otIcmp6Type = 128;
+#[doc = "< Echo Reply"]
+pub const otIcmp6Type_OT_ICMP6_TYPE_ECHO_REPLY: otIcmp6Type = 129;
+#[doc = "< Router Solicitation"]
+pub const otIcmp6Type_OT_ICMP6_TYPE_ROUTER_SOLICIT: otIcmp6Type = 133;
+#[doc = "< Router Advertisement"]
+pub const otIcmp6Type_OT_ICMP6_TYPE_ROUTER_ADVERT: otIcmp6Type = 134;
+#[doc = "< Neighbor Solicitation"]
+pub const otIcmp6Type_OT_ICMP6_TYPE_NEIGHBOR_SOLICIT: otIcmp6Type = 135;
+#[doc = "< Neighbor Advertisement"]
+pub const otIcmp6Type_OT_ICMP6_TYPE_NEIGHBOR_ADVERT: otIcmp6Type = 136;
+#[doc = " ICMPv6 Message Types\n"]
+pub type otIcmp6Type = crate::c_types::c_uint;
+#[doc = "< Destination Unreachable No Route"]
+pub const otIcmp6Code_OT_ICMP6_CODE_DST_UNREACH_NO_ROUTE: otIcmp6Code = 0;
+#[doc = "< Fragment Reassembly Time Exceeded"]
+pub const otIcmp6Code_OT_ICMP6_CODE_FRAGM_REAS_TIME_EX: otIcmp6Code = 1;
+#[doc = " ICMPv6 Message Codes\n"]
+pub type otIcmp6Code = crate::c_types::c_uint;
+#[doc = " @struct otIcmp6Header\n\n Represents an ICMPv6 header.\n"]
+#[repr(C, packed)]
+#[derive(Copy, Clone)]
+pub struct otIcmp6Header {
+    #[doc = "< Type"]
+    pub mType: u8,
+    #[doc = "< Code"]
+    pub mCode: u8,
+    #[doc = "< Checksum"]
+    pub mChecksum: u16,
+    #[doc = "< Message-specific data"]
+    pub mData: otIcmp6Header__bindgen_ty_1,
+}
+#[repr(C, packed)]
+#[derive(Copy, Clone)]
+pub union otIcmp6Header__bindgen_ty_1 {
+    pub m8: [u8; 4usize],
+    pub m16: [u16; 2usize],
+    pub m32: [u32; 1usize],
+}
+#[doc = " This callback allows OpenThread to inform the application of a received ICMPv6 message.\n\n @param[in]  aContext      A pointer to arbitrary context information.\n @param[in]  aMessage      A pointer to the received message.\n @param[in]  aMessageInfo  A pointer to message information associated with @p aMessage.\n @param[in]  aIcmpHeader   A pointer to the received ICMPv6 header.\n"]
+pub type otIcmp6ReceiveCallback = ::core::option::Option<
+    unsafe extern "C" fn(
+        aContext: *mut crate::c_types::c_void,
+        aMessage: *mut otMessage,
+        aMessageInfo: *const otMessageInfo,
+        aIcmpHeader: *const otIcmp6Header,
+    ),
+>;
+#[doc = " Implements ICMPv6 message handler.\n"]
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct otIcmp6Handler {
+    #[doc = "< The ICMPv6 received callback"]
+    pub mReceiveCallback: otIcmp6ReceiveCallback,
+    #[doc = "< A pointer to arbitrary context information."]
+    pub mContext: *mut crate::c_types::c_void,
+    #[doc = "< A pointer to the next handler in the list."]
+    pub mNext: *mut otIcmp6Handler,
+}
+#[doc = "< ICMPv6 Echo processing disabled"]
+pub const otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_DISABLED: otIcmp6EchoMode = 0;
+#[doc = "< ICMPv6 Echo processing enabled only for unicast requests only"]
+pub const otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_UNICAST_ONLY: otIcmp6EchoMode = 1;
+#[doc = "< ICMPv6 Echo processing enabled only for multicast requests only"]
+pub const otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_MULTICAST_ONLY: otIcmp6EchoMode = 2;
+#[doc = "< ICMPv6 Echo processing enabled for unicast and multicast requests"]
+pub const otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_ALL: otIcmp6EchoMode = 3;
+#[doc = "< ICMPv6 Echo processing enabled for RLOC/ALOC destinations only"]
+pub const otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_RLOC_ALOC_ONLY: otIcmp6EchoMode = 4;
+#[doc = " ICMPv6 Echo Reply Modes\n"]
+pub type otIcmp6EchoMode = crate::c_types::c_uint;
+extern "C" {
+    #[doc = " Indicates whether or not ICMPv6 Echo processing is enabled.\n\n @param[in]  aInstance A pointer to an OpenThread instance.\n\n @retval OT_ICMP6_ECHO_HANDLER_DISABLED        ICMPv6 Echo processing is disabled.\n @retval OT_ICMP6_ECHO_HANDLER_UNICAST_ONLY    ICMPv6 Echo processing enabled for unicast requests only\n @retval OT_ICMP6_ECHO_HANDLER_MULTICAST_ONLY  ICMPv6 Echo processing enabled for multicast requests only\n @retval OT_ICMP6_ECHO_HANDLER_ALL             ICMPv6 Echo processing enabled for unicast and multicast requests\n"]
+    pub fn otIcmp6GetEchoMode(aInstance: *mut otInstance) -> otIcmp6EchoMode;
+}
+extern "C" {
+    #[doc = " Sets whether or not ICMPv6 Echo processing is enabled.\n\n @param[in]  aInstance A pointer to an OpenThread instance.\n @param[in]  aMode     The ICMPv6 Echo processing mode.\n"]
+    pub fn otIcmp6SetEchoMode(aInstance: *mut otInstance, aMode: otIcmp6EchoMode);
+}
+extern "C" {
+    #[doc = " Registers a handler to provide received ICMPv6 messages.\n\n @note A handler structure @p aHandler has to be stored in persistent (static) memory.\n       OpenThread does not make a copy of handler structure.\n\n @param[in]  aInstance A pointer to an OpenThread instance.\n @param[in]  aHandler  A pointer to a handler containing callback that is called when\n                       an ICMPv6 message is received.\n"]
+    pub fn otIcmp6RegisterHandler(
+        aInstance: *mut otInstance,
+        aHandler: *mut otIcmp6Handler,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Sends an ICMPv6 Echo Request via the Thread interface.\n\n @param[in]  aInstance     A pointer to an OpenThread instance.\n @param[in]  aMessage      A pointer to the message buffer containing the ICMPv6 payload.\n @param[in]  aMessageInfo  A reference to message information associated with @p aMessage.\n @param[in]  aIdentifier   An identifier to aid in matching Echo Replies to this Echo Request.\n                           May be zero.\n"]
+    pub fn otIcmp6SendEchoRequest(
+        aInstance: *mut otInstance,
+        aMessage: *mut otMessage,
+        aMessageInfo: *const otMessageInfo,
+        aIdentifier: u16,
+    ) -> otError;
 }
 pub type __builtin_va_list = *mut crate::c_types::c_void;

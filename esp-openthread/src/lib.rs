@@ -10,7 +10,7 @@
 ))]
 compile_error!("Multiple device type features set");
 
-#[cfg(any(feature = "ftd", feature = "sed", feature = "ssed"))]
+#[cfg(any(feature = "sed", feature = "ssed"))]
 compile_error!("Unsupported device type selected");
 
 mod entropy;
@@ -98,7 +98,7 @@ pub enum Error {
 // TODO: Make these generated as part of bindgen task?
 bitflags! {
     /// Specific state/configuration that has changed
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
     pub struct ChangedFlags: u32 {
         /// IPv6 address was added
         const Ipv6AddressAdded = OT_CHANGED_IP6_ADDRESS_ADDED;
@@ -619,10 +619,7 @@ impl<'a> OpenThread<'a> {
         Ok(())
     }
 
-
-    pub fn get_link_mode(
-        &self,
-    ) -> otLinkModeConfig {
+    pub fn get_link_mode(&self) -> otLinkModeConfig {
         unsafe { otThreadGetLinkMode(self.instance) }
     }
 

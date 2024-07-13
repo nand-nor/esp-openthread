@@ -12,7 +12,7 @@ use crate::{CURRENT_INSTANCE, TIMER, TIMER_CALLBACK_SHOULD_RUN};
 
 const TICKS_PER_SECOND: u64 = 16_000_000;
 
-pub fn install_isr(mut timer: Alarm<Target, esp_hal::Blocking, 0>) {
+pub fn install_isr(timer: Alarm<Target, esp_hal::Blocking, 0>) {
     timer.clear_interrupt();
 
     critical_section::with(|cs| {

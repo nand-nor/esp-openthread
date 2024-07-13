@@ -17,10 +17,10 @@ no-std-net = "0.6.0"
 
 
 [features]
-default = ["mtd"]
+default = []
 esp32c6 = [ "esp-ieee802154/esp32c6", "esp-hal/esp32c6"]
 esp32h2 = [ "esp-ieee802154/esp32h2", "esp-hal/esp32h2"]
-mtd = []
-sed = []
-ssed = []
-ftd = []
+mtd = ["esp-openthread-sys/mtd"]
+sed = ["esp-openthread-sys/mtd"]
+ssed = ["esp-openthread-sys/mtd"]
+ftd = ["esp-openthread-sys/ftd"]
