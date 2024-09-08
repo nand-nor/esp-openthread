@@ -32,15 +32,15 @@ pub extern "C" fn otInstanceResetToBootloader(_instance: *const otInstance) -> o
 
 // other C functions
 
-#[no_mangle]
-pub extern "C" fn vsnprintf(
-    _dst: *mut u8,
-    _n: u32,
-    _format: *const u8,
-    mut _args: core::ffi::VaListImpl,
-) {
-    todo!()
-}
+//#[no_mangle]
+//pub extern "C" fn vsnprintf(
+//    _dst: *mut u8,
+//    _n: u32,
+//    _format: *const u8,
+//    mut _args: core::ffi::VaListImpl,
+//) {
+//    todo!()
+//}
 
 #[no_mangle]
 pub extern "C" fn iscntrl(v: u32) -> i32 {
@@ -53,10 +53,10 @@ pub extern "C" fn isprint() {
     log::error!("isprint not implemented");
 }
 
-#[no_mangle]
-pub extern "C" fn snprintf() {
-    todo!()
-}
+//#[no_mangle]
+//pub extern "C" fn snprintf() {
+//    todo!()
+//}
 
 #[no_mangle]
 pub extern "C" fn isupper() {
