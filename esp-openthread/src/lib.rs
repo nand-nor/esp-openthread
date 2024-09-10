@@ -4,6 +4,7 @@
 mod entropy;
 mod platform;
 mod radio;
+#[cfg(feature="srp-client")]
 mod srp_client;
 mod timer;
 
@@ -53,6 +54,7 @@ use sys::{
         OT_CHANGED_THREAD_PARTITION_ID, OT_CHANGED_THREAD_RLOC_ADDED,
         OT_CHANGED_THREAD_RLOC_REMOVED, OT_CHANGED_THREAD_ROLE, OT_NETWORK_NAME_MAX_SIZE,
         OT_RADIO_FRAME_MAX_SIZE,
+        //otSrpClientAutoStartCallback, otSrpClientCallback
     },
     c_types::c_void,
 };
@@ -690,13 +692,32 @@ impl<'a> OpenThread<'a> {
         }
     }
 
-    pub fn setup_srp_client_auto(&mut self, host_name: &str) -> Result<(), Error> {
-        srp_client::set_srp_client_host_name(self.instance, host_name.as_ptr() as _)?;
-        srp_client::set_srp_client_host_addresses_auto_config(self.instance)?;
-        srp_client::enable_srp_autostart(self.instance);
+    #[cfg(feature="srp-client")]
+    pub fn setup_srp_client_autostart(&mut self, callback: Option<unsafe extern "C" fn(aServerSockAddr: *const otSockAddr, aContext: *mut c_void)>) -> Result<(), Error> {
+
+        if !callback.is_some() {
+            srp_client::enable_srp_autostart(self.instance);
+            return Ok(())
+        }
+        srp_client::enable_srp_autostart_with_callback_and_context(self.instance, callback, core::ptr::null_mut());
+
         Ok(())
     }
 
+    #[cfg(feature="srp-client")]
+    pub fn setup_srp_client_host_addr_autoconfig(&mut self) -> Result<(), Error> {
+        srp_client::set_srp_client_host_addresses_auto_config(self.instance)?;
+        Ok(())
+    }
+
+    #[cfg(feature="srp-client")]
+    pub fn setup_srp_client_set_hostname(&mut self, host_name: &str) -> Result<(), Error> {
+        srp_client::set_srp_client_host_name(self.instance, host_name.as_ptr() as _)?;
+        Ok(())
+    }
+
+
+    #[cfg(feature="srp-client")]
     pub fn setup_srp_client_with_addr(
         &mut self,
         host_name: &str,
@@ -709,6 +730,7 @@ impl<'a> OpenThread<'a> {
 
     // For now, txt entries are expected to be provided as hex strings to avoid having to pull in the hex crate
     // for example a key entry of 'abc' should be provided as '03616263'
+    #[cfg(feature="srp-client")]
     pub fn register_service_with_srp_client(
         &mut self,
         instance_name: &str,
@@ -721,7 +743,7 @@ impl<'a> OpenThread<'a> {
         key_lease: Option<u32>,
     ) -> Result<(), Error> {
         if !srp_client::is_srp_client_running(self.instance) {
-            self.setup_srp_client_auto("ot-esp32")?;
+            self.setup_srp_client_autostart(None)?;
         }
 
         srp_client::add_srp_client_service(
@@ -741,14 +763,17 @@ impl<'a> OpenThread<'a> {
         Ok(())
     }
 
+    #[cfg(feature="srp-client")]
     pub fn set_srp_client_ttl(&mut self, ttl: u32) {
         srp_client::set_srp_client_ttl(self.instance, ttl);
     }
 
+    #[cfg(feature="srp-client")]
     pub fn get_srp_client_ttl(&mut self) -> u32 {
         srp_client::get_srp_client_ttl(self.instance)
     }
 
+    #[cfg(feature="srp-client")]
     pub fn stop_srp_client(&mut self) -> Result<(), Error> {
         srp_client::srp_client_stop(self.instance);
         Ok(())

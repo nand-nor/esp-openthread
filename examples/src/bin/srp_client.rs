@@ -20,6 +20,9 @@ use esp_openthread::{
 use esp_println::println;
 use static_cell::StaticCell;
 
+// Must be null terminated string
+const HOSTNAME: &str = "ot-esp32\0";
+
 const BOUND_PORT: u16 = 1212;
 
 #[entry]
@@ -70,6 +73,10 @@ fn main() -> ! {
     };
     println!("dataset : {:?}", dataset);
 
+    if let Err(e) = openthread.setup_srp_client_autostart(Some(srp_state_change_callback)) {
+        log::error!("Error enabling srp client {e:?}");
+    }
+
     openthread.set_active_dataset(dataset).unwrap();
 
     openthread.ipv6_set_enabled(true).unwrap();
@@ -97,9 +104,13 @@ fn main() -> ! {
         });
 
         if register {
-            if let Err(e) = openthread.setup_srp_client_auto("ot-esp32") {
+            // Must be a NULL terminated string with static lifetime
+            if let Err(e) = openthread.setup_srp_client_set_hostname(HOSTNAME) {
                 log::error!("Error enabling srp client {e:?}");
-                break;
+            }
+            
+            if let Err(e) = openthread.setup_srp_client_host_addr_autoconfig() {
+                log::error!("Error enabling srp client {e:?}");
             }
 
             if let Err(e) = openthread.register_service_with_srp_client(
@@ -159,4 +170,9 @@ fn print_all_addresses(addrs: heapless::Vec<NetworkInterfaceUnicastAddress, 5>) 
         println!("{}", addr.address);
     }
     println!();
+}
+
+unsafe extern "C" fn srp_state_change_callback(sock_addr: *const esp_openthread::sys::bindings::otSockAddr, _context: *mut esp_openthread::sys::c_types::c_void){
+    log::info!("SRP client started, server addr is {:?}", sock_addr);
+    // set dns config???
 }
