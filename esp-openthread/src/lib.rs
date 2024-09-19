@@ -57,7 +57,7 @@ use sys::{
         OT_CHANGED_THREAD_NETIF_STATE, OT_CHANGED_THREAD_NETWORK_NAME, OT_CHANGED_THREAD_PANID,
         OT_CHANGED_THREAD_PARTITION_ID, OT_CHANGED_THREAD_RLOC_ADDED,
         OT_CHANGED_THREAD_RLOC_REMOVED, OT_CHANGED_THREAD_ROLE, OT_NETWORK_NAME_MAX_SIZE,
-        OT_RADIO_FRAME_MAX_SIZE,
+        OT_RADIO_FRAME_MAX_SIZE, otInstanceGetUptime
     },
     c_types::c_void,
 };
@@ -868,6 +868,11 @@ impl<'a> OpenThread<'a> {
     pub fn search_for_better_parent(&mut self) -> Result<(), Error> {
         checked!(unsafe { otThreadSearchForBetterParent(self.instance) })?;
         Ok(())
+    }
+
+    /// Get instance uptime as u64
+    pub fn get_uptime(&self) -> u64 {
+        unsafe { otInstanceGetUptime(self.instance) }
     }
 }
 

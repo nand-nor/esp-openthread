@@ -22,6 +22,8 @@ pub unsafe extern "C" fn otPlatLog(
     todo!()
 }
 
+/// Requires caller to rebuild openthread with OPENTHREAD_CONFIG_PLATFORM_BOOTLOADER_MODE_ENABLE 
+/// enabled (not currently set in precompiled libraries)
 #[no_mangle]
 pub extern "C" fn otInstanceResetToBootloader(_instance: *const u8) -> otError {
     otError_OT_ERROR_NOT_CAPABLE
