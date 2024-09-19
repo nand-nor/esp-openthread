@@ -37,12 +37,13 @@ use sys::{
         otIp6SetEnabled, otLinkModeConfig, otMeshLocalPrefix, otMessage, otMessageAppend,
         otMessageFree, otMessageGetLength, otMessageInfo, otMessageRead,
         otNetifIdentifier_OT_NETIF_THREAD, otNetworkKey, otNetworkName, otOperationalDataset,
-        otOperationalDatasetComponents, otPlatRadioEnergyScanDone, otPlatRadioGetIeeeEui64,
-	otPlatRadioReceiveDone, otPskc, otRadioFrame, otRadioFrame__bindgen_ty_1, 
-	otRadioFrame__bindgen_ty_1__bindgen_ty_2, otSecurityPolicy, otSetStateChangedCallback,  
-	otSockAddr, otTaskletsArePending, otTaskletsProcess, otThreadGetDeviceRole, otThreadGetLinkMode, 
-	otThreadSetEnabled, otThreadSetLinkMode, otTimestamp, otUdpBind, otUdpClose, otUdpNewMessage, 
-	otUdpOpen, otUdpSend, otUdpSocket, OT_CHANGED_ACTIVE_DATASET, OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL,
+        otOperationalDatasetComponents, otPlatRadioEnergyScanDone,
+        otPlatRadioGetIeeeEui64, otPlatRadioReceiveDone, otPskc, otRadioFrame,
+        otRadioFrame__bindgen_ty_1, otRadioFrame__bindgen_ty_1__bindgen_ty_2, otSecurityPolicy,
+        otSetStateChangedCallback, otSockAddr, otTaskletsArePending, otTaskletsProcess,
+        otThreadGetDeviceRole, otThreadGetLinkMode, otThreadSetEnabled, otThreadSetLinkMode,
+        otTimestamp, otUdpBind, otUdpClose, otUdpNewMessage, otUdpOpen, otUdpSend, otUdpSocket,
+        OT_CHANGED_ACTIVE_DATASET, OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL,
         OT_CHANGED_COMMISSIONER_STATE, OT_CHANGED_IP6_ADDRESS_ADDED,
         OT_CHANGED_IP6_ADDRESS_REMOVED, OT_CHANGED_IP6_MULTICAST_SUBSCRIBED,
         OT_CHANGED_IP6_MULTICAST_UNSUBSCRIBED, OT_CHANGED_JOINER_STATE,
@@ -952,6 +953,17 @@ where
             None
         }
     })
+}
+
+/// Allow callers to generate a random u32
+pub fn get_random_u32() -> u32 {
+    unsafe {
+        if let Some(mut rng) = crate::entropy::RANDOM_GENERATOR {
+            rng.random()
+        } else {
+            0
+        }
+    }
 }
 
 /// A UdpSocket
