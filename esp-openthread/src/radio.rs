@@ -2,8 +2,8 @@ use core::ptr::addr_of_mut;
 
 use esp_ieee802154::Config;
 use esp_openthread_sys::bindings::{
-    __BindgenBitfieldUnit, otError, otError_OT_ERROR_NONE, otInstance, otPlatRadioTxDone,
-    otPlatRadioTxStarted, otRadioFrame, otRadioFrame__bindgen_ty_1, otError_OT_ERROR_NOT_CAPABLE,
+    __BindgenBitfieldUnit, otError, otError_OT_ERROR_NONE, otError_OT_ERROR_NOT_CAPABLE,
+    otInstance, otPlatRadioTxDone, otPlatRadioTxStarted, otRadioFrame, otRadioFrame__bindgen_ty_1,
     otRadioFrame__bindgen_ty_1__bindgen_ty_1, OT_RADIO_FRAME_MAX_SIZE, OT_RADIO_FRAME_MIN_SIZE,
 };
 
