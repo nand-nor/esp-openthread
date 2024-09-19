@@ -22,7 +22,7 @@ use esp_hal::{
     timer::systimer::{Alarm, SpecificComparator, SpecificUnit, Target},
     Blocking,
 };
-use esp_ieee802154::{rssi_to_lqi, Ieee802154};
+use esp_ieee802154::{rssi_to_lqi, Config, Ieee802154};
 
 // for now just re-export all
 pub use esp_openthread_sys as sys;
@@ -76,7 +76,7 @@ use crate::timer::current_millis;
 
 static RADIO: Mutex<RefCell<Option<&'static mut Ieee802154>>> = Mutex::new(RefCell::new(None));
 
-static NETWORK_SETTINGS: Mutex<RefCell<Option<NetworkSettings>>> = Mutex::new(RefCell::new(None));
+static RADIO_SETTINGS: Mutex<RefCell<Option<Config>>> = Mutex::new(RefCell::new(None));
 
 static CHANGE_CALLBACK: Mutex<RefCell<Option<&'static mut (dyn FnMut(ChangedFlags) + Send)>>> =
     Mutex::new(RefCell::new(None));
@@ -264,14 +264,32 @@ pub struct OperationalDataset {
     pub channel_mask: Option<u32>,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-struct NetworkSettings {
-    promiscuous: bool,
-    rx_when_idle: bool,
-    ext_address: u64,
-    short_address: u16,
-    pan_id: u16,
-    channel: u8,
+fn get_radio_config() -> Config {
+    critical_section::with(|cs| {
+        let mut settings = RADIO_SETTINGS.borrow_ref_mut(cs);
+        let settings = settings.borrow_mut();
+        if let Some(settings) = settings.as_mut() {
+            settings.clone()
+        } else {
+            log::debug!("Generating default radio settings with auto ack tx/rx and rx_on_when_idle set to true");
+            Config {
+                auto_ack_tx: true,
+                auto_ack_rx: true,
+                rx_when_idle: true,
+                ..Config::default()
+            }
+        }
+    })
+}
+
+fn set_radio_config(settings: Config) -> Config {
+    critical_section::with(|cs| {
+        RADIO_SETTINGS
+            .borrow_ref_mut(cs)
+            .borrow_mut()
+            .replace(settings);
+    });
+    get_radio_config()
 }
 
 /// Instance of OpenThread
@@ -430,17 +448,18 @@ impl<'a> OpenThread<'a> {
         if let Some(pan_id) = dataset.pan_id {
             raw_dataset.mPanId = pan_id;
             pan_id_present = true;
-            let settings: NetworkSettings = get_settings();
-            set_settings(NetworkSettings { pan_id, ..settings });
+            set_radio_config(Config {
+                pan_id: Some(pan_id),
+                ..get_radio_config()
+            });
         }
 
         if let Some(channel) = dataset.channel {
             raw_dataset.mChannel = channel;
             channel_present = true;
-            let settings: NetworkSettings = get_settings();
-            set_settings(NetworkSettings {
+            set_radio_config(Config {
                 channel: channel as u8,
-                ..settings
+                ..get_radio_config()
             });
         }
 
@@ -815,6 +834,18 @@ impl<'a> OpenThread<'a> {
     pub fn get_link_mode(&self) -> otLinkModeConfig {
         unsafe { otThreadGetLinkMode(self.instance) }
     }
+
+    pub fn set_radio_config(&mut self, config: Config) -> Result<(), Error> {
+        critical_section::with(|cs| {
+            let mut radio = RADIO.borrow_ref_mut(cs);
+            let radio = radio.borrow_mut();
+            if let Some(radio) = radio.as_mut() {
+                radio.set_config(config)
+            }
+        });
+        set_radio_config(config);
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
@@ -857,7 +888,7 @@ impl<'a> Drop for OpenThread<'a> {
     fn drop(&mut self) {
         critical_section::with(|cs| {
             RADIO.borrow_ref_mut(cs).take();
-            NETWORK_SETTINGS.borrow_ref_mut(cs).take();
+            RADIO_SETTINGS.borrow_ref_mut(cs).take();
             CHANGE_CALLBACK.borrow_ref_mut(cs).take();
         });
     }
@@ -915,34 +946,6 @@ where
             None
         }
     })
-}
-
-fn get_settings() -> NetworkSettings {
-    critical_section::with(|cs| {
-        let mut settings = NETWORK_SETTINGS.borrow_ref_mut(cs);
-        let settings = settings.borrow_mut();
-
-        if let Some(settings) = settings.as_mut() {
-            settings.clone()
-        } else {
-            log::error!("Generating default settings");
-            NetworkSettings::default()
-        }
-    })
-}
-
-fn set_settings(settings: NetworkSettings) {
-    critical_section::with(|cs| {
-        log::info!(
-            "Setting settings to {:?}\nwere {:?}",
-            settings,
-            NETWORK_SETTINGS.borrow_ref(cs)
-        );
-        NETWORK_SETTINGS
-            .borrow_ref_mut(cs)
-            .borrow_mut()
-            .replace(settings);
-    });
 }
 
 /// A UdpSocket

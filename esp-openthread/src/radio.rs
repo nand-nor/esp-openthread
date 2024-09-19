@@ -7,7 +7,7 @@ use esp_openthread_sys::bindings::{
     otRadioFrame__bindgen_ty_1__bindgen_ty_1, OT_RADIO_FRAME_MAX_SIZE, OT_RADIO_FRAME_MIN_SIZE,
 };
 
-use crate::{get_settings, platform::CURRENT_INSTANCE, set_settings, with_radio, NetworkSettings};
+use crate::{get_radio_config, platform::CURRENT_INSTANCE, set_radio_config, with_radio};
 
 pub static mut PSDU: [u8; OT_RADIO_FRAME_MAX_SIZE as usize] =
     [0u8; OT_RADIO_FRAME_MAX_SIZE as usize];
@@ -110,30 +110,29 @@ pub extern "C" fn otPlatRadioSleep(instance: *const otInstance) -> otError {
 }
 
 #[no_mangle]
+pub extern "C" fn otPlatRadioGetTransmitPower(
+    _instance: *mut otInstance,
+    power: *mut i8,
+) -> otError {
+    let config = get_radio_config();
+    unsafe { *power = config.txpower };
+    otError_OT_ERROR_NONE
+}
+
+#[no_mangle]
 pub extern "C" fn otPlatRadioDisable(_instance: *const otInstance) -> otError {
     todo!()
 }
 
 #[no_mangle]
 pub extern "C" fn otPlatRadioSetPromiscuous(_instance: *const otInstance, enable: bool) {
-    set_settings(NetworkSettings {
+    let config = set_radio_config(Config {
         promiscuous: enable,
-        ..get_settings()
+        ..get_radio_config()
     });
 
-    let settings = get_settings();
     with_radio(|radio| {
-        radio.set_config(Config {
-            channel: settings.channel,
-            promiscuous: settings.promiscuous,
-            pan_id: Some(settings.pan_id),
-            short_addr: Some(settings.short_address),
-            ext_addr: Some(settings.ext_address),
-            rx_when_idle: settings.rx_when_idle,
-            auto_ack_rx: true,
-            auto_ack_tx: true,
-            ..Config::default()
-        });
+        radio.set_config(config);
     });
 }
 
@@ -161,7 +160,7 @@ pub extern "C" fn otPlatRadioEnergyScan(
 #[no_mangle]
 pub extern "C" fn otPlatRadioGetPromiscuous(_instance: *const otInstance) -> bool {
     log::info!("otPlatRadioGetPromiscuous");
-    get_settings().promiscuous
+    get_radio_config().promiscuous
 }
 
 #[no_mangle]
@@ -172,72 +171,42 @@ pub extern "C" fn otPlatRadioSetExtendedAddress(instance: *const otInstance, add
             .try_into()
             .unwrap(),
     );
-    set_settings(NetworkSettings {
-        ext_address: ext_addr,
-        ..get_settings()
+
+    let config = set_radio_config(Config {
+        ext_addr: Some(ext_addr),
+        ..get_radio_config()
     });
 
-    let settings = get_settings();
     with_radio(|radio| {
-        radio.set_config(Config {
-            channel: settings.channel,
-            promiscuous: settings.promiscuous,
-            pan_id: Some(settings.pan_id),
-            short_addr: Some(settings.short_address),
-            ext_addr: Some(settings.ext_address),
-            rx_when_idle: settings.rx_when_idle,
-            auto_ack_rx: true,
-            auto_ack_tx: true,
-            ..Config::default()
-        });
+        radio.set_config(config);
     });
 }
 
 #[no_mangle]
 pub extern "C" fn otPlatRadioSetShortAddress(instance: *const otInstance, address: u16) {
     log::info!("otPlatRadioSetShortAddress {:p} {}", instance, address);
-    set_settings(NetworkSettings {
-        short_address: address,
-        ..get_settings()
+
+    let config = set_radio_config(Config {
+        short_addr: Some(address),
+        ..get_radio_config()
     });
 
-    let settings = get_settings();
     with_radio(|radio| {
-        radio.set_config(Config {
-            channel: settings.channel,
-            promiscuous: settings.promiscuous,
-            pan_id: Some(settings.pan_id),
-            short_addr: Some(settings.short_address),
-            ext_addr: Some(settings.ext_address),
-            rx_when_idle: settings.rx_when_idle,
-            auto_ack_rx: true,
-            auto_ack_tx: true,
-            ..Config::default()
-        });
+        radio.set_config(config);
     });
 }
 
 #[no_mangle]
 pub extern "C" fn otPlatRadioSetPanId(_instance: *const otInstance, pan_id: u16) {
     log::info!("otPlatRadioSetPanId {pan_id}");
-    set_settings(NetworkSettings {
-        pan_id,
-        ..get_settings()
+
+    let config = set_radio_config(Config {
+        pan_id: Some(pan_id),
+        ..get_radio_config()
     });
 
-    let settings = get_settings();
     with_radio(|radio| {
-        radio.set_config(Config {
-            channel: settings.channel,
-            promiscuous: settings.promiscuous,
-            pan_id: Some(settings.pan_id),
-            short_addr: Some(settings.short_address),
-            ext_addr: Some(settings.ext_address),
-            rx_when_idle: settings.rx_when_idle,
-            auto_ack_rx: true,
-            auto_ack_tx: true,
-            ..Config::default()
-        });
+        radio.set_config(config);
     });
 }
 
@@ -255,22 +224,13 @@ pub extern "C" fn otPlatRadioTransmit(
         &data
     );
 
-    let settings = get_settings();
-    log::info!("Settings {:x?}", settings);
+    let config = set_radio_config(Config {
+        channel: frame.mChannel,
+        ..get_radio_config()
+    });
 
     with_radio(|radio| {
-        radio.set_config(Config {
-            channel: frame.mChannel,
-            promiscuous: settings.promiscuous,
-            pan_id: Some(settings.pan_id),
-            short_addr: Some(settings.short_address),
-            ext_addr: Some(settings.ext_address),
-            rx_when_idle: settings.rx_when_idle,
-            auto_ack_rx: true,
-            auto_ack_tx: true,
-            ..Config::default()
-        });
-
+        radio.set_config(config);
         radio.transmit_raw(data).ok();
     });
 
@@ -293,26 +253,14 @@ pub extern "C" fn otPlatRadioTransmit(
 #[no_mangle]
 pub extern "C" fn otPlatRadioReceive(_instance: *mut otInstance, channel: u8) -> otError {
     log::debug!("otPlatRadioReceive channel = {channel}");
-    let settings: NetworkSettings = get_settings();
-    log::info!("Settings {:x?}", settings);
 
-    set_settings(NetworkSettings {
+    let config = set_radio_config(Config {
         channel,
-        ..settings
+        ..get_radio_config()
     });
 
     with_radio(|radio| {
-        radio.set_config(Config {
-            channel,
-            promiscuous: settings.promiscuous,
-            pan_id: Some(settings.pan_id),
-            short_addr: Some(settings.short_address),
-            ext_addr: Some(settings.ext_address),
-            rx_when_idle: settings.rx_when_idle,
-            auto_ack_rx: true,
-            auto_ack_tx: true,
-            ..Config::default()
-        });
+        radio.set_config(config);
         radio.start_receive();
     });
 

@@ -1,7 +1,7 @@
 // mostly stubbing out the platform stuff for now
 
 use esp_openthread_sys::{
-    bindings::{otError, otLogLevel, otLogRegion},
+    bindings::{otError, otError_OT_ERROR_NOT_CAPABLE, otLogLevel, otLogRegion},
     c_types,
 };
 
@@ -20,6 +20,11 @@ pub unsafe extern "C" fn otPlatLog(
     _args: ...
 ) -> otError {
     todo!()
+}
+
+#[no_mangle]
+pub extern "C" fn otInstanceResetToBootloader(_instance: *const u8) -> otError {
+    otError_OT_ERROR_NOT_CAPABLE
 }
 
 // other C functions
