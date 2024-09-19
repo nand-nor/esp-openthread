@@ -834,6 +834,15 @@ impl<'a> OpenThread<'a> {
         link_mode.set_mRxOnWhenIdle(rx_on_when_idle);
         link_mode.set_mDeviceType(device_type);
         link_mode.set_mNetworkData(network_data);
+
+        // reflect rx_idle mode in radio config
+        let config = set_radio_config(Config {
+            rx_when_idle: rx_on_when_idle,
+            ..get_radio_config()
+        });
+
+        with_radio(|radio| radio.set_config(config));
+
         unsafe { otThreadSetLinkMode(self.instance, link_mode) };
         Ok(())
     }
