@@ -80,9 +80,13 @@ static mut ACK_FRAME: otRadioFrame = otRadioFrame {
     },
 };
 
+/// Caller is requires to ensure mac arg is sufficient length
 #[no_mangle]
-pub extern "C" fn otPlatRadioGetIeeeEui64(_instance: *const otInstance, _out: *mut u8) {
-    todo!()
+pub extern "C" fn otPlatRadioGetIeeeEui64(_instance: *const otInstance, mac: *mut u8) {
+    let efuse_mac = esp_hal::efuse::Efuse::get_mac_address();
+    efuse_mac.iter().enumerate().for_each(|(idx, &b)| {
+        unsafe { mac.add(idx).write_volatile(b) };
+    });
 }
 
 #[no_mangle]

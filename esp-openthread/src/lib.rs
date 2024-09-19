@@ -27,17 +27,20 @@ pub use esp_openthread_sys as sys;
 use no_std_net::Ipv6Addr;
 use sys::{
     bindings::{
-        __BindgenBitfieldUnit, otChangedFlags, otDatasetSetActive, otError_OT_ERROR_NONE,
-        otExtendedPanId, otInstance, otInstanceInitSingle, otIp6Address,
-        otIp6Address__bindgen_ty_1, otIp6GetUnicastAddresses, otIp6SetEnabled, otMeshLocalPrefix,
-        otMessage, otMessageAppend, otMessageFree, otMessageGetLength, otMessageInfo,
-        otMessageRead, otNetifIdentifier_OT_NETIF_THREAD, otNetworkKey, otNetworkName,
-        otOperationalDataset, otOperationalDatasetComponents, otPlatRadioEnergyScanDone,
-        otPlatRadioReceiveDone, otPskc, otRadioFrame, otRadioFrame__bindgen_ty_1,
-        otRadioFrame__bindgen_ty_1__bindgen_ty_2, otSecurityPolicy, otSetStateChangedCallback,
-        otSockAddr, otTaskletsArePending, otTaskletsProcess, otThreadSetEnabled, otTimestamp,
-        otUdpBind, otUdpClose, otUdpNewMessage, otUdpOpen, otUdpSend, otUdpSocket,
-        OT_CHANGED_ACTIVE_DATASET, OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL,
+        __BindgenBitfieldUnit, otChangedFlags, otDatasetSetActive, otDeviceRole,
+        otDeviceRole_OT_DEVICE_ROLE_CHILD, otDeviceRole_OT_DEVICE_ROLE_DETACHED,
+        otDeviceRole_OT_DEVICE_ROLE_DISABLED, otDeviceRole_OT_DEVICE_ROLE_LEADER,
+        otDeviceRole_OT_DEVICE_ROLE_ROUTER, otError_OT_ERROR_NONE, otExtendedPanId, otInstance,
+        otInstanceInitSingle, otIp6Address, otIp6Address__bindgen_ty_1, otIp6GetUnicastAddresses,
+        otIp6SetEnabled, otLinkModeConfig, otMeshLocalPrefix, otMessage, otMessageAppend,
+        otMessageFree, otMessageGetLength, otMessageInfo, otMessageRead,
+        otNetifIdentifier_OT_NETIF_THREAD, otNetworkKey, otNetworkName, otOperationalDataset,
+        otOperationalDatasetComponents, otPlatRadioEnergyScanDone, otPlatRadioGetIeeeEui64,
+	otPlatRadioReceiveDone, otPskc, otRadioFrame, otRadioFrame__bindgen_ty_1, 
+	otRadioFrame__bindgen_ty_1__bindgen_ty_2, otSecurityPolicy, otSetStateChangedCallback,  
+	otSockAddr, otTaskletsArePending, otTaskletsProcess, otThreadGetDeviceRole, otThreadGetLinkMode, 
+	otThreadSetEnabled, otThreadSetLinkMode, otTimestamp, otUdpBind, otUdpClose, otUdpNewMessage, 
+	otUdpOpen, otUdpSend, otUdpSocket, OT_CHANGED_ACTIVE_DATASET, OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL,
         OT_CHANGED_COMMISSIONER_STATE, OT_CHANGED_IP6_ADDRESS_ADDED,
         OT_CHANGED_IP6_ADDRESS_REMOVED, OT_CHANGED_IP6_MULTICAST_SUBSCRIBED,
         OT_CHANGED_IP6_MULTICAST_UNSUBSCRIBED, OT_CHANGED_JOINER_STATE,
@@ -687,6 +690,11 @@ impl<'a> OpenThread<'a> {
                 }
             };
         }
+    }
+    /// This function returns the device's EUI
+    /// caller must ensure the provided slice is 6 bytes in length
+    pub fn get_eui(&self, out: &mut [u8]) {
+        unsafe { otPlatRadioGetIeeeEui64(self.instance, out.as_mut_ptr()) }
     }
 }
 
