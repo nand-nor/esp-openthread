@@ -292,7 +292,7 @@ pub extern "C" fn otPlatRadioTransmit(
 
 #[no_mangle]
 pub extern "C" fn otPlatRadioReceive(_instance: *mut otInstance, channel: u8) -> otError {
-    log::info!("otPlatRadioReceive channel = {channel}");
+    log::debug!("otPlatRadioReceive channel = {channel}");
     let settings: NetworkSettings = get_settings();
     log::info!("Settings {:x?}", settings);
 

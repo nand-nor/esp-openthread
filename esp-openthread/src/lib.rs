@@ -29,25 +29,27 @@ pub use esp_openthread_sys as sys;
 use no_std_net::Ipv6Addr;
 use sys::{
     bindings::{
-        __BindgenBitfieldUnit, otChangedFlags, otDatasetSetActive, otError_OT_ERROR_NONE,
-        otExtendedPanId, otInstance, otInstanceInitSingle, otIp6Address,
-        otIp6Address__bindgen_ty_1, otIp6GetUnicastAddresses, otIp6SetEnabled, otMeshLocalPrefix,
-        otMessage, otMessageAppend, otMessageFree, otMessageGetLength, otMessageInfo,
-        otMessageRead, otNetifIdentifier_OT_NETIF_THREAD, otNetworkKey, otNetworkName,
-        otOperationalDataset, otOperationalDatasetComponents, otPlatRadioEnergyScanDone,
-        otPlatRadioReceiveDone, otPskc, otRadioFrame, otRadioFrame__bindgen_ty_1,
-        otRadioFrame__bindgen_ty_1__bindgen_ty_2, otSecurityPolicy, otSetStateChangedCallback,
-        otSockAddr, otTaskletsArePending, otTaskletsProcess, otThreadSetEnabled, otTimestamp,
-        otUdpBind, otUdpClose, otUdpNewMessage, otUdpOpen, otUdpSend, otUdpSocket,
-        OT_CHANGED_ACTIVE_DATASET, OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL,
-        OT_CHANGED_COMMISSIONER_STATE, OT_CHANGED_IP6_ADDRESS_ADDED,
-        OT_CHANGED_IP6_ADDRESS_REMOVED, OT_CHANGED_IP6_MULTICAST_SUBSCRIBED,
-        OT_CHANGED_IP6_MULTICAST_UNSUBSCRIBED, OT_CHANGED_JOINER_STATE,
-        OT_CHANGED_NAT64_TRANSLATOR_STATE, OT_CHANGED_NETWORK_KEY, OT_CHANGED_PARENT_LINK_QUALITY,
-        OT_CHANGED_PENDING_DATASET, OT_CHANGED_PSKC, OT_CHANGED_SECURITY_POLICY,
-        OT_CHANGED_SUPPORTED_CHANNEL_MASK, OT_CHANGED_THREAD_BACKBONE_ROUTER_LOCAL,
-        OT_CHANGED_THREAD_BACKBONE_ROUTER_STATE, OT_CHANGED_THREAD_CHANNEL,
-        OT_CHANGED_THREAD_CHILD_ADDED, OT_CHANGED_THREAD_CHILD_REMOVED,
+        __BindgenBitfieldUnit, otChangedFlags, otDatasetSetActive, otDeviceRole,
+        otDeviceRole_OT_DEVICE_ROLE_CHILD, otDeviceRole_OT_DEVICE_ROLE_DETACHED,
+        otDeviceRole_OT_DEVICE_ROLE_DISABLED, otDeviceRole_OT_DEVICE_ROLE_LEADER,
+        otDeviceRole_OT_DEVICE_ROLE_ROUTER, otError_OT_ERROR_NONE, otExtendedPanId, otInstance,
+        otInstanceInitSingle, otIp6Address, otIp6Address__bindgen_ty_1, otIp6GetUnicastAddresses,
+        otIp6SetEnabled, otMeshLocalPrefix, otMessage, otMessageAppend, otMessageFree,
+        otMessageGetLength, otMessageInfo, otMessageRead, otNetifIdentifier_OT_NETIF_THREAD,
+        otNetworkKey, otNetworkName, otOperationalDataset, otOperationalDatasetComponents,
+        otPlatRadioEnergyScanDone, otPlatRadioReceiveDone, otPskc, otRadioFrame,
+        otRadioFrame__bindgen_ty_1, otRadioFrame__bindgen_ty_1__bindgen_ty_2, otSecurityPolicy,
+        otSetStateChangedCallback, otSockAddr, otTaskletsArePending, otTaskletsProcess,
+        otThreadGetDeviceRole, otThreadSetEnabled, otTimestamp, otUdpBind, otUdpClose,
+        otUdpNewMessage, otUdpOpen, otUdpSend, otUdpSocket, OT_CHANGED_ACTIVE_DATASET,
+        OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL, OT_CHANGED_COMMISSIONER_STATE,
+        OT_CHANGED_IP6_ADDRESS_ADDED, OT_CHANGED_IP6_ADDRESS_REMOVED,
+        OT_CHANGED_IP6_MULTICAST_SUBSCRIBED, OT_CHANGED_IP6_MULTICAST_UNSUBSCRIBED,
+        OT_CHANGED_JOINER_STATE, OT_CHANGED_NAT64_TRANSLATOR_STATE, OT_CHANGED_NETWORK_KEY,
+        OT_CHANGED_PARENT_LINK_QUALITY, OT_CHANGED_PENDING_DATASET, OT_CHANGED_PSKC,
+        OT_CHANGED_SECURITY_POLICY, OT_CHANGED_SUPPORTED_CHANNEL_MASK,
+        OT_CHANGED_THREAD_BACKBONE_ROUTER_LOCAL, OT_CHANGED_THREAD_BACKBONE_ROUTER_STATE,
+        OT_CHANGED_THREAD_CHANNEL, OT_CHANGED_THREAD_CHILD_ADDED, OT_CHANGED_THREAD_CHILD_REMOVED,
         OT_CHANGED_THREAD_EXT_PANID, OT_CHANGED_THREAD_KEY_SEQUENCE_COUNTER,
         OT_CHANGED_THREAD_LL_ADDR, OT_CHANGED_THREAD_ML_ADDR, OT_CHANGED_THREAD_NETDATA,
         OT_CHANGED_THREAD_NETIF_STATE, OT_CHANGED_THREAD_NETWORK_NAME, OT_CHANGED_THREAD_PANID,
@@ -786,6 +788,47 @@ impl<'a> OpenThread<'a> {
     pub fn stop_srp_client(&mut self) -> Result<(), Error> {
         srp_client::srp_client_stop(self.instance);
         Ok(())
+    }
+    
+    pub fn get_device_role(&self) -> ThreadDeviceRole {
+        let role = unsafe { otThreadGetDeviceRole(self.instance) };
+        role.into()
+    }
+}
+
+#[derive(Debug)]
+pub enum ThreadDeviceRole {
+    Disabled,
+    Detached,
+    Child,
+    Router,
+    Leader,
+    Unknown,
+}
+
+#[allow(non_upper_case_globals)]
+impl From<otDeviceRole> for ThreadDeviceRole {
+    fn from(role: otDeviceRole) -> Self {
+        match role {
+            otDeviceRole_OT_DEVICE_ROLE_DISABLED => ThreadDeviceRole::Disabled,
+            otDeviceRole_OT_DEVICE_ROLE_DETACHED => ThreadDeviceRole::Detached,
+            otDeviceRole_OT_DEVICE_ROLE_CHILD => ThreadDeviceRole::Child,
+            otDeviceRole_OT_DEVICE_ROLE_ROUTER => ThreadDeviceRole::Router,
+            otDeviceRole_OT_DEVICE_ROLE_LEADER => ThreadDeviceRole::Leader,
+            _ => ThreadDeviceRole::Unknown,
+        }
+    }
+}
+impl core::fmt::Display for ThreadDeviceRole {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            ThreadDeviceRole::Disabled => write!(f, "Disabled"),
+            ThreadDeviceRole::Detached => write!(f, "Detached"),
+            ThreadDeviceRole::Child => write!(f, "Child"),
+            ThreadDeviceRole::Router => write!(f, "Router"),
+            ThreadDeviceRole::Leader => write!(f, "Leader"),
+            ThreadDeviceRole::Unknown => write!(f, "Unknown"),
+        }
     }
 }
 
