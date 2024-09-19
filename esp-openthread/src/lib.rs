@@ -41,17 +41,17 @@ use sys::{
         otPlatRadioGetIeeeEui64, otPlatRadioReceiveDone, otPskc, otRadioFrame,
         otRadioFrame__bindgen_ty_1, otRadioFrame__bindgen_ty_1__bindgen_ty_2, otSecurityPolicy,
         otSetStateChangedCallback, otSockAddr, otTaskletsArePending, otTaskletsProcess,
-        otThreadGetDeviceRole, otThreadGetLinkMode, otThreadSetEnabled, otThreadSetLinkMode,
-        otTimestamp, otUdpBind, otUdpClose, otUdpNewMessage, otUdpOpen, otUdpSend, otUdpSocket,
-        OT_CHANGED_ACTIVE_DATASET, OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL,
-        OT_CHANGED_COMMISSIONER_STATE, OT_CHANGED_IP6_ADDRESS_ADDED,
-        OT_CHANGED_IP6_ADDRESS_REMOVED, OT_CHANGED_IP6_MULTICAST_SUBSCRIBED,
-        OT_CHANGED_IP6_MULTICAST_UNSUBSCRIBED, OT_CHANGED_JOINER_STATE,
-        OT_CHANGED_NAT64_TRANSLATOR_STATE, OT_CHANGED_NETWORK_KEY, OT_CHANGED_PARENT_LINK_QUALITY,
-        OT_CHANGED_PENDING_DATASET, OT_CHANGED_PSKC, OT_CHANGED_SECURITY_POLICY,
-        OT_CHANGED_SUPPORTED_CHANNEL_MASK, OT_CHANGED_THREAD_BACKBONE_ROUTER_LOCAL,
-        OT_CHANGED_THREAD_BACKBONE_ROUTER_STATE, OT_CHANGED_THREAD_CHANNEL,
-        OT_CHANGED_THREAD_CHILD_ADDED, OT_CHANGED_THREAD_CHILD_REMOVED,
+        otThreadGetDeviceRole, otThreadGetLinkMode, otThreadSearchForBetterParent,
+        otThreadSetEnabled, otThreadSetLinkMode, otTimestamp, otUdpBind, otUdpClose,
+        otUdpNewMessage, otUdpOpen, otUdpSend, otUdpSocket, OT_CHANGED_ACTIVE_DATASET,
+        OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL, OT_CHANGED_COMMISSIONER_STATE,
+        OT_CHANGED_IP6_ADDRESS_ADDED, OT_CHANGED_IP6_ADDRESS_REMOVED,
+        OT_CHANGED_IP6_MULTICAST_SUBSCRIBED, OT_CHANGED_IP6_MULTICAST_UNSUBSCRIBED,
+        OT_CHANGED_JOINER_STATE, OT_CHANGED_NAT64_TRANSLATOR_STATE, OT_CHANGED_NETWORK_KEY,
+        OT_CHANGED_PARENT_LINK_QUALITY, OT_CHANGED_PENDING_DATASET, OT_CHANGED_PSKC,
+        OT_CHANGED_SECURITY_POLICY, OT_CHANGED_SUPPORTED_CHANNEL_MASK,
+        OT_CHANGED_THREAD_BACKBONE_ROUTER_LOCAL, OT_CHANGED_THREAD_BACKBONE_ROUTER_STATE,
+        OT_CHANGED_THREAD_CHANNEL, OT_CHANGED_THREAD_CHILD_ADDED, OT_CHANGED_THREAD_CHILD_REMOVED,
         OT_CHANGED_THREAD_EXT_PANID, OT_CHANGED_THREAD_KEY_SEQUENCE_COUNTER,
         OT_CHANGED_THREAD_LL_ADDR, OT_CHANGED_THREAD_ML_ADDR, OT_CHANGED_THREAD_NETDATA,
         OT_CHANGED_THREAD_NETIF_STATE, OT_CHANGED_THREAD_NETWORK_NAME, OT_CHANGED_THREAD_PANID,
@@ -860,6 +860,13 @@ impl<'a> OpenThread<'a> {
             }
         });
         set_radio_config(config);
+        Ok(())
+    }
+
+    /// Will only execute a parent search if device is in Child role
+    /// caller should ensure appropriate role prior to calling
+    pub fn search_for_better_parent(&mut self) -> Result<(), Error> {
+        checked!(unsafe { otThreadSearchForBetterParent(self.instance) })?;
         Ok(())
     }
 }
