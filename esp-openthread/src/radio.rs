@@ -138,14 +138,28 @@ pub extern "C" fn otPlatRadioSetPromiscuous(_instance: *const otInstance, enable
 
 #[no_mangle]
 pub extern "C" fn otPlatRadioGetRssi(_instance: *const otInstance) -> i8 {
-    log::error!("otPlatRadioGetRssi unimplemented");
-    33
+    log::trace!("otPlatRadioGetRssi reporting last rssi from RCV_fRAME");
+    let rssi = unsafe { crate::RCV_FRAME.mInfo.mRxInfo.mRssi };
+    // If no rcv frame has set rssi yet, or if rssi is not valid,
+    // then use a fake value instead of 0
+    if rssi == 0 || rssi >= 127 {
+        33
+    } else {
+        rssi
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn otPlatRadioGetReceiveSensitivity(_instance: *const otInstance) -> i8 {
-    log::error!("otPlatRadioGetReceiveSensitivity unimplemented");
-    -33
+    log::trace!("otPlatRadioGetReceiveSensitivity reporting const defined in ESP-IDF");
+    // from https://github.com/espressif/esp-idf/blob/release/v5.3/components/openthread/src/port/esp_openthread_radio.c#L35
+    -120
+}
+
+#[no_mangle]
+pub extern "C" fn otPlatRadioIsEnabled(_instance: *mut otInstance) -> bool {
+    // todo
+    true
 }
 
 #[no_mangle]
