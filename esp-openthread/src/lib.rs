@@ -82,7 +82,7 @@ static CHANGE_CALLBACK: Mutex<RefCell<Option<&'static mut (dyn FnMut(ChangedFlag
 static mut RCV_FRAME_PSDU: [u8; OT_RADIO_FRAME_MAX_SIZE as usize] =
     [0u8; OT_RADIO_FRAME_MAX_SIZE as usize];
 static mut RCV_FRAME: otRadioFrame = otRadioFrame {
-    mPsdu: unsafe { addr_of_mut!(RCV_FRAME_PSDU) as *mut u8 },
+    mPsdu: addr_of_mut!(RCV_FRAME_PSDU) as *mut u8 ,
     mLength: 0,
     mChannel: 0,
     mRadioType: 0,
