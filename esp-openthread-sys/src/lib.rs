@@ -33,3 +33,44 @@ impl core::fmt::Debug for bindings::otIp6Address__bindgen_ty_1 {
             .finish()
     }
 }
+
+impl Default for bindings::otMacCounters {
+    fn default() -> Self {
+        Self {
+            mTxTotal: 0,
+            mTxUnicast: 0,
+            mTxBroadcast: 0,
+            mTxAckRequested: 0,
+            mTxAcked: 0,
+            mTxNoAckRequested: 0,
+            mTxData: 0,
+            mTxDataPoll: 0,
+            mTxBeacon: 0,
+            mTxBeaconRequest: 0,
+            mTxOther: 0,
+            mTxRetry: 0,
+            mTxDirectMaxRetryExpiry: 0,
+            mTxIndirectMaxRetryExpiry: 0,
+            mTxErrCca: 0,
+            mTxErrAbort: 0,
+            mTxErrBusyChannel: 0,
+            mRxTotal: 0,
+            mRxUnicast: 0,
+            mRxBroadcast: 0,
+            mRxData: 0,
+            mRxDataPoll: 0,
+            mRxBeacon: 0,
+            mRxBeaconRequest: 0,
+            mRxOther: 0,
+            mRxAddressFiltered: 0,
+            mRxDestAddrFiltered: 0,
+            mRxDuplicated: 0,
+            mRxErrNoFrame: 0,
+            mRxErrUnknownNeighbor: 0,
+            mRxErrInvalidSrcAddr: 0,
+            mRxErrSec: 0,
+            mRxErrFcs: 0,
+            mRxErrOther: 0,
+        }
+    }
+}

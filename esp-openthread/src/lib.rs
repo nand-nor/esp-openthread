@@ -35,24 +35,24 @@ use sys::{
         otDeviceRole_OT_DEVICE_ROLE_ROUTER, otError_OT_ERROR_NONE, otExtendedPanId, otInstance,
         otInstanceGetUptime, otInstanceInitSingle, otIp6Address, otIp6Address__bindgen_ty_1,
         otIp6GetUnicastAddresses, otIp6IsSlaacEnabled, otIp6SetEnabled, otIp6SetSlaacEnabled,
-        otLinkModeConfig, otMeshLocalPrefix, otMessage, otMessageAppend, otMessageFree,
-        otMessageGetLength, otMessageInfo, otMessageRead, otNetifIdentifier_OT_NETIF_THREAD,
-        otNetworkKey, otNetworkName, otOperationalDataset, otOperationalDatasetComponents,
-        otPlatEntropyGet, otPlatRadioEnergyScanDone, otPlatRadioGetIeeeEui64,
-        otPlatRadioReceiveDone, otPskc, otRadioFrame, otRadioFrame__bindgen_ty_1,
-        otRadioFrame__bindgen_ty_1__bindgen_ty_2, otSecurityPolicy, otSetStateChangedCallback,
-        otSockAddr, otTaskletsArePending, otTaskletsProcess, otThreadGetDeviceRole,
-        otThreadGetLinkMode, otThreadSearchForBetterParent, otThreadSetEnabled,
-        otThreadSetLinkMode, otTimestamp, otUdpBind, otUdpClose, otUdpNewMessage, otUdpOpen,
-        otUdpSend, otUdpSocket, OT_CHANGED_ACTIVE_DATASET, OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL,
-        OT_CHANGED_COMMISSIONER_STATE, OT_CHANGED_IP6_ADDRESS_ADDED,
-        OT_CHANGED_IP6_ADDRESS_REMOVED, OT_CHANGED_IP6_MULTICAST_SUBSCRIBED,
-        OT_CHANGED_IP6_MULTICAST_UNSUBSCRIBED, OT_CHANGED_JOINER_STATE,
-        OT_CHANGED_NAT64_TRANSLATOR_STATE, OT_CHANGED_NETWORK_KEY, OT_CHANGED_PARENT_LINK_QUALITY,
-        OT_CHANGED_PENDING_DATASET, OT_CHANGED_PSKC, OT_CHANGED_SECURITY_POLICY,
-        OT_CHANGED_SUPPORTED_CHANNEL_MASK, OT_CHANGED_THREAD_BACKBONE_ROUTER_LOCAL,
-        OT_CHANGED_THREAD_BACKBONE_ROUTER_STATE, OT_CHANGED_THREAD_CHANNEL,
-        OT_CHANGED_THREAD_CHILD_ADDED, OT_CHANGED_THREAD_CHILD_REMOVED,
+        otLinkGetCounters, otLinkModeConfig, otLinkResetCounters, otMacCounters, otMeshLocalPrefix,
+        otMessage, otMessageAppend, otMessageFree, otMessageGetLength, otMessageInfo,
+        otMessageRead, otNetifIdentifier_OT_NETIF_THREAD, otNetworkKey, otNetworkName,
+        otOperationalDataset, otOperationalDatasetComponents, otPlatRadioEnergyScanDone,
+        otPlatRadioGetIeeeEui64, otPlatRadioReceiveDone, otPskc, otRadioFrame,
+        otRadioFrame__bindgen_ty_1, otRadioFrame__bindgen_ty_1__bindgen_ty_2, otSecurityPolicy,
+        otSetStateChangedCallback, otSockAddr, otTaskletsArePending, otTaskletsProcess,
+        otThreadGetDeviceRole, otThreadGetLinkMode, otThreadSearchForBetterParent,
+        otThreadSetEnabled, otThreadSetLinkMode, otTimestamp, otUdpBind, otUdpClose,
+        otUdpNewMessage, otUdpOpen, otUdpSend, otUdpSocket, OT_CHANGED_ACTIVE_DATASET,
+        OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL, OT_CHANGED_COMMISSIONER_STATE,
+        OT_CHANGED_IP6_ADDRESS_ADDED, OT_CHANGED_IP6_ADDRESS_REMOVED,
+        OT_CHANGED_IP6_MULTICAST_SUBSCRIBED, OT_CHANGED_IP6_MULTICAST_UNSUBSCRIBED,
+        OT_CHANGED_JOINER_STATE, OT_CHANGED_NAT64_TRANSLATOR_STATE, OT_CHANGED_NETWORK_KEY,
+        OT_CHANGED_PARENT_LINK_QUALITY, OT_CHANGED_PENDING_DATASET, OT_CHANGED_PSKC,
+        OT_CHANGED_SECURITY_POLICY, OT_CHANGED_SUPPORTED_CHANNEL_MASK,
+        OT_CHANGED_THREAD_BACKBONE_ROUTER_LOCAL, OT_CHANGED_THREAD_BACKBONE_ROUTER_STATE,
+        OT_CHANGED_THREAD_CHANNEL, OT_CHANGED_THREAD_CHILD_ADDED, OT_CHANGED_THREAD_CHILD_REMOVED,
         OT_CHANGED_THREAD_EXT_PANID, OT_CHANGED_THREAD_KEY_SEQUENCE_COUNTER,
         OT_CHANGED_THREAD_LL_ADDR, OT_CHANGED_THREAD_ML_ADDR, OT_CHANGED_THREAD_NETDATA,
         OT_CHANGED_THREAD_NETIF_STATE, OT_CHANGED_THREAD_NETWORK_NAME, OT_CHANGED_THREAD_PANID,
@@ -881,9 +881,19 @@ impl<'a> OpenThread<'a> {
         unsafe { otIp6SetSlaacEnabled(self.instance, enabled) }
     }
 
-    /// set SLAAC enabled
+    /// Check if SLAAC module is enabled
     pub fn get_slaac_enabled(&self) -> bool {
         unsafe { otIp6IsSlaacEnabled(self.instance) }
+    }
+
+    /// Return pointer to MAC counters
+    pub fn get_link_counters(&mut self) -> *const otMacCounters {
+        unsafe { otLinkGetCounters(self.instance) }
+    }
+
+    /// Reset MAC counters
+    pub fn reset_link_counters(&mut self) {
+        unsafe { otLinkResetCounters(self.instance) }
     }
 }
 
