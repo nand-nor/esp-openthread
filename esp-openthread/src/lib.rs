@@ -37,12 +37,12 @@ use sys::{
         otIp6SetEnabled, otLinkModeConfig, otMeshLocalPrefix, otMessage, otMessageAppend,
         otMessageFree, otMessageGetLength, otMessageInfo, otMessageRead,
         otNetifIdentifier_OT_NETIF_THREAD, otNetworkKey, otNetworkName, otOperationalDataset,
-        otOperationalDatasetComponents, otPlatRadioEnergyScanDone, otPlatRadioReceiveDone, otPskc,
-        otRadioFrame, otRadioFrame__bindgen_ty_1, otRadioFrame__bindgen_ty_1__bindgen_ty_2,
-        otSecurityPolicy, otSetStateChangedCallback, otSockAddr, otTaskletsArePending,
-        otTaskletsProcess, otThreadGetDeviceRole, otThreadGetLinkMode, otThreadSetEnabled,
-        otThreadSetLinkMode, otTimestamp, otUdpBind, otUdpClose, otUdpNewMessage, otUdpOpen,
-        otUdpSend, otUdpSocket, OT_CHANGED_ACTIVE_DATASET, OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL,
+        otOperationalDatasetComponents, otPlatRadioEnergyScanDone, otPlatRadioGetIeeeEui64,
+	otPlatRadioReceiveDone, otPskc, otRadioFrame, otRadioFrame__bindgen_ty_1, 
+	otRadioFrame__bindgen_ty_1__bindgen_ty_2, otSecurityPolicy, otSetStateChangedCallback,  
+	otSockAddr, otTaskletsArePending, otTaskletsProcess, otThreadGetDeviceRole, otThreadGetLinkMode, 
+	otThreadSetEnabled, otThreadSetLinkMode, otTimestamp, otUdpBind, otUdpClose, otUdpNewMessage, 
+	otUdpOpen, otUdpSend, otUdpSocket, OT_CHANGED_ACTIVE_DATASET, OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL,
         OT_CHANGED_COMMISSIONER_STATE, OT_CHANGED_IP6_ADDRESS_ADDED,
         OT_CHANGED_IP6_ADDRESS_REMOVED, OT_CHANGED_IP6_MULTICAST_SUBSCRIBED,
         OT_CHANGED_IP6_MULTICAST_UNSUBSCRIBED, OT_CHANGED_JOINER_STATE,
@@ -809,7 +809,13 @@ impl<'a> OpenThread<'a> {
         srp_client::srp_client_stop(self.instance);
         Ok(())
     }
-    
+
+    /// This function returns the device's EUI
+    /// caller must ensure the provided slice is 6 bytes in length
+    pub fn get_eui(&self, out: &mut [u8]) {
+        unsafe { otPlatRadioGetIeeeEui64(self.instance, out.as_mut_ptr()) }
+    }
+
     pub fn get_device_role(&self) -> ThreadDeviceRole {
         let role = unsafe { otThreadGetDeviceRole(self.instance) };
         role.into()
