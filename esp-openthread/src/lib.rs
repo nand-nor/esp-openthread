@@ -24,6 +24,9 @@ use esp_hal::{
 };
 use esp_ieee802154::{rssi_to_lqi, Config, Ieee802154};
 
+#[cfg(feature = "srp-client")]
+pub use srp_client::{SrpClientItemState, SrpClientService};
+
 // for now just re-export all
 pub use esp_openthread_sys as sys;
 use no_std_net::Ipv6Addr;
@@ -811,6 +814,50 @@ impl<'a> OpenThread<'a> {
     pub fn stop_srp_client(&mut self) -> Result<(), Error> {
         srp_client::srp_client_stop(self.instance);
         Ok(())
+    }
+
+    #[cfg(feature = "srp-client")]
+    pub fn get_srp_client_state(&mut self) -> Result<Option<SrpClientItemState>, Error> {
+        Ok(srp_client::get_srp_client_host_state(self.instance))
+    }
+
+    #[cfg(feature = "srp-client")]
+    pub fn clear_srp_client_host_buffers(&mut self) {
+        srp_client::srp_clear_all_client_services(self.instance)
+    }
+
+    /// If there are any services already registered, unregister them
+    #[cfg(feature = "srp-client")]
+    pub fn srp_unregister_all_services(
+        &mut self,
+        remove_keylease: bool,
+        send_update: bool,
+    ) -> Result<(), Error> {
+        srp_client::srp_unregister_and_remove_all_client_services(
+            self.instance,
+            remove_keylease,
+            send_update,
+        )?;
+        Ok(())
+    }
+
+    #[cfg(feature = "srp-client")]
+    pub fn srp_clear_service(&mut self, service: SrpClientService) -> Result<(), Error> {
+        srp_client::srp_clear_service(self.instance, service)?;
+        Ok(())
+    }
+
+    #[cfg(feature = "srp-client")]
+    pub fn srp_unregister_service(&mut self, service: SrpClientService) -> Result<(), Error> {
+        srp_client::srp_unregister_service(self.instance, service)?;
+        Ok(())
+    }
+
+    #[cfg(feature = "srp-client")]
+    pub fn srp_get_services(
+        &mut self,
+    ) -> heapless::Vec<SrpClientService, { srp_client::MAX_SERVICES }> {
+        srp_client::get_srp_client_services(self.instance)
     }
 
     /// This function returns the device's EUI
