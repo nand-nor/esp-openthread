@@ -708,6 +708,17 @@ impl<'a> Drop for OpenThread<'a> {
     }
 }
 
+/// Allow callers to generate a random u32
+pub fn get_random_u32() -> u32 {
+    unsafe {
+        if let Some(mut rng) = crate::entropy::RANDOM_GENERATOR {
+            rng.random()
+        } else {
+            0
+        }
+    }
+}
+
 #[allow(unused)]
 /// From https://github.com/espressif/esp-idf/blob/release/v5.3/components/ieee802154/driver/esp_ieee802154_frame.c#L45
 fn is_supported_frame_type_raw(frame_type: u8) -> bool {

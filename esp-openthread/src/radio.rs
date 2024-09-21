@@ -84,9 +84,15 @@ static mut ACK_FRAME: otRadioFrame = otRadioFrame {
 #[no_mangle]
 pub extern "C" fn otPlatRadioGetIeeeEui64(_instance: *const otInstance, mac: *mut u8) {
     let efuse_mac = esp_hal::efuse::Efuse::get_mac_address();
-    efuse_mac.iter().enumerate().for_each(|(idx, &b)| {
-        unsafe { mac.add(idx).write_volatile(b) };
-    });
+
+    let dest_slice = unsafe { core::slice::from_raw_parts_mut(mac, 6) };
+    dest_slice[..6].copy_from_slice(&efuse_mac);
+
+    //efuse_mac.iter().enumerate().for_each(|(idx, &b)| {
+    //    unsafe { mac.add(idx).write_volatile(b) };
+    //});
+
+
 }
 
 #[no_mangle]
