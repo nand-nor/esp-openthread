@@ -10,15 +10,12 @@ use critical_section::Mutex;
 
 use esp_backtrace as _;
 use esp_hal::{
-    clock::ClockControl, gpio::Io, peripherals::Peripherals, prelude::*, rng::Rng, system::SystemControl,
+     gpio::Io, peripherals::Peripherals, prelude::*, rng::Rng, 
     timer::systimer::{Alarm, SystemTimer, SpecificUnit, FrozenUnit}, 
 };
 use esp_ieee802154::{Config, Ieee802154};
 use esp_openthread::{NetworkInterfaceUnicastAddress, OperationalDataset, ThreadTimestamp};
 use esp_println::println;
-
-use esp_hal_smartled::{smartLedBuffer, SmartLedsAdapter};
-use smart_leds::{brightness, colors, gamma, SmartLedsWrite};
 
 pub const BOUND_PORT: u16 = 1212;
 
@@ -26,9 +23,7 @@ pub const BOUND_PORT: u16 = 1212;
 fn main() -> ! {
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    let mut peripherals = Peripherals::take();
-    let system = SystemControl::new(peripherals.SYSTEM);
-    let clocks = ClockControl::boot_defaults(system.clock_control).freeze();
+    let mut peripherals = esp_hal::init(esp_hal::Config::default());
 
     println!("Initializing");
 
@@ -107,28 +102,11 @@ fn main() -> ! {
 
     let mut buffer = [0u8; 512];
 
-    let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
-
-    let led_pin = io.pins.gpio8;
-
-    // Configure RMT peripheral globally
-    #[cfg(not(feature = "esp32h2"))]
-    let rmt = esp_hal::rmt::Rmt::new(peripherals.RMT, 80.MHz(), &clocks).unwrap();
-    #[cfg(feature = "esp32h2")]
-    let rmt = esp_hal::rmt::Rmt::new(peripherals.RMT, 32.MHz(), &clocks).unwrap();
-
-    let rmt_buffer = smartLedBuffer!(1);
-    let mut led = SmartLedsAdapter::new(rmt.channel0, led_pin, rmt_buffer, &clocks);
-    let mut data;
     let mut eui: [u8; 6] = [0u8; 6];
 
     loop {
         openthread.process();
         openthread.run_tasklets();
-
-        data = [colors::SEA_GREEN];
-        led.write(brightness(gamma(data.iter().cloned()), 50))
-            .unwrap();
 
         let (len, from, port) = socket.receive(&mut buffer).unwrap();
         if len > 0 {
@@ -157,9 +135,6 @@ fn main() -> ! {
             }
         });
 
-        data = [colors::MEDIUM_ORCHID];
-        led.write(brightness(gamma(data.iter().cloned()), 50))
-            .unwrap();
     }
 }
 
