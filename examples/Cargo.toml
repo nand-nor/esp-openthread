@@ -19,8 +19,9 @@ heapless = "0.8.0"
 no-std-net = "0.6.0"
 critical-section = "1.1.0"
 static_cell = "2.1.0"
+rtt-target = "0.5.0"
 
-esp-openthread = { path = "../esp-openthread" }
+esp-openthread = { path = "../esp-openthread", features=["debug-target"] }
 
 [features]
 esp32c6 = [ "esp-hal/esp32c6", "esp-ieee802154/esp32c6", "esp-openthread/esp32c6", "esp-backtrace/esp32c6", "esp-println/esp32c6" ]

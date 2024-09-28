@@ -58,7 +58,7 @@ pub fn install_isr(
 
 pub fn set_timer_target(when: u32) {
     let timestamp = when as u64 * (TICKS_PER_SECOND / 1000);
-    log::trace!("Setting timer target {timestamp:}");
+    rtt_target::rprintln!("Setting timer target {:?}", timestamp);
     critical_section::with(|cs| {
         let mut timer = TIMER.borrow_ref_mut(cs);
         let timer = timer.as_mut().unwrap();
@@ -78,7 +78,9 @@ pub fn stop() {
 
 #[handler]
 fn SYSTIMER_TARGET0() {
-    log::warn!("timer interrupt triggered at {}", current_millis());
+   // rtt_target::rprintln!("ISR is calling it!");
+    //let current_millis = current_millis();
+   // rtt_target::rprintln!("timer interrupt triggered at {}", current_millis);
     // clear the interrupt
     critical_section::with(|cs| {
         TIMER.borrow_ref_mut(cs).as_mut().unwrap().clear_interrupt();
@@ -88,13 +90,21 @@ fn SYSTIMER_TARGET0() {
 }
 
 pub fn current_millis() -> u64 {
-    esp_hal::timer::systimer::SystemTimer::now() / (TICKS_PER_SECOND / 1000)
+   // rtt_target::rprintln!("millis before");
+
+    let res = esp_hal::timer::systimer::SystemTimer::now() / (TICKS_PER_SECOND / 1000);
+  //  rtt_target::rprintln!("millis after {:?}", res);
+
+    res
 }
 
 #[no_mangle]
 pub extern "C" fn otPlatAlarmMilliGetNow(_instance: *const otInstance) -> u32 {
-    log::trace!("otPlatAlarmMilliGetNow");
-    crate::timer::current_millis() as u32
+
+    let ugh = crate::timer::current_millis() as u32;
+    rtt_target::rprintln!("otPlatAlarmMilliGetNow {:?}", ugh);
+
+    ugh
 }
 
 #[no_mangle]
@@ -103,17 +113,25 @@ pub extern "C" fn otPlatAlarmMilliStartAt(
     at0: u32,
     adt: u32,
 ) -> otError {
-    log::trace!("otPlatAlarmMilliStartAt {at0} {adt}");
-    unsafe {
-        CURRENT_INSTANCE = instance as usize;
-    }
+    rtt_target::rprintln!("otPlatAlarmMilliStartAt {:?} {:?}", at0, adt);
+
     crate::timer::set_timer_target(at0 + adt);
     otError_OT_ERROR_NONE
 }
 
 #[no_mangle]
+pub extern "C" fn otPlatAlarmMicroStartAt(instance: *mut otInstance,
+    at0: u32,
+    adt: u32,
+)
+{
+    log::error!("otPlatAlarmMicro called!! {at0:?} {adt:?}");
+
+}
+
+#[no_mangle]
 pub extern "C" fn otPlatAlarmMilliStop(_instance: *const otInstance) -> otError {
-    log::trace!("otPlatAlarmMilliStop");
+    rtt_target::rprintln!("otPlatAlarmMilliStop");
     crate::timer::stop();
     otError_OT_ERROR_NONE
 }
@@ -122,7 +140,7 @@ fn timer_triggered() {
     critical_section::with(|cs| *TIMER_CALLBACK_SHOULD_RUN.borrow_ref_mut(cs) = true);
 }
 
-pub(crate) fn run_if_due() {
+pub(crate) fn run_if_due(instance: *mut otInstance) {
     let should_run = critical_section::with(|cs| {
         let res = *TIMER_CALLBACK_SHOULD_RUN.borrow_ref_mut(cs);
         *TIMER_CALLBACK_SHOULD_RUN.borrow_ref_mut(cs) = false;
@@ -130,9 +148,13 @@ pub(crate) fn run_if_due() {
     });
 
     if should_run {
+        let current_millis = current_millis();
+        #[cfg(feature = "debug-target")]
+        rtt_target::rprintln!("run if due triggering alarm fire {:?}", current_millis);
+
         unsafe {
-            let instance = CURRENT_INSTANCE as *mut otInstance;
             otPlatAlarmMilliFired(instance);
+        //    otPlatAlarmMicroFired(instance);
         }
     }
 }

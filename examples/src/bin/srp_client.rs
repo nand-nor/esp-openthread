@@ -37,11 +37,13 @@ const BOUND_PORT: u16 = 1212;
 
 extern crate alloc;
 
+use rtt_target::{rtt_init_print, rprintln};
+
 use alloc::string::{ToString, String};
 
 #[entry] 
 fn main() -> ! {
-    esp_println::logger::init_logger_from_env();
+    esp_println::logger::init_logger(log::LevelFilter::Warn);
 
     esp_alloc::heap_allocator!(32 * 1024);
 
@@ -83,7 +85,7 @@ fn main() -> ! {
         network_name: Some("OpenThread-58d1".try_into().unwrap()),
         extended_pan_id: Some([0x3a, 0x90, 0xe3, 0xa3, 0x19, 0xa9, 0x04, 0x94]),
         pan_id: Some(0x58d1),
-        channel: Some(11),
+        channel: Some(25),
         channel_mask: Some(0x07fff800),
         ..OperationalDataset::default()
     };
@@ -124,6 +126,17 @@ fn main() -> ! {
     print_all_addresses(addrs);
 
     let mut register = false;
+    let mut process_delay = 0;
+
+    let srp_changed = Mutex::new(RefCell::new((0, 0, 0, 0,)));
+    let mut srp_callback = |error, a, b, c| {
+        println!("{:?}", error);
+        critical_section::with(|cs| *srp_changed.borrow_ref_mut(cs) = (error, a, b, c));
+    };
+
+
+    rtt_init_print!();
+
     loop {
         openthread.process();
         openthread.run_tasklets();
@@ -138,7 +151,11 @@ fn main() -> ! {
             }
         });
 
-        if register {
+        if register && process_delay >= 100 {
+
+            openthread.set_srp_state_callback(Some(&mut srp_callback));
+
+
             critical_section::with(|cs| {
                 let mut host = HOSTNAME.borrow_ref_mut(cs);
                 let host = host.borrow_mut();
@@ -177,11 +194,15 @@ fn main() -> ! {
             });
 
             break;
+        } else {
+            process_delay +=1;
         }
     }
 
     // restrict scope of socket (so we can mutably borrow openthread after we break out of loop)
     {
+        rprintln!("Hello, world!");
+
         let mut socket = openthread.get_udp_socket::<512>().unwrap();
         let mut socket = pin!(socket);
         socket.bind(BOUND_PORT).unwrap();
@@ -189,12 +210,20 @@ fn main() -> ! {
         let mut buffer = [0u8; 512];
 
         loop {
+
             openthread.process();
-            openthread.run_tasklets();
+
+           // if process_delay % 9 == 0 {
+          //      println!("Runnin tasklet {process_delay:?}");
+                openthread.run_tasklets();
+          //  }
+            process_delay += 1;
             let (len, from, port) = socket.receive(&mut buffer).unwrap();
 
             // When the program receives a UDP packet, it will unregister SRP services
             if len > 0 {
+                rprintln!("Got some datas");
+
                 println!(
                     "received {:02x?} from {:?} port {}",
                     &buffer[..len],
@@ -229,6 +258,7 @@ fn main() -> ! {
     loop {
         openthread.process();
         openthread.run_tasklets();
+
         critical_section::with(|cs| {
             let mut c = changed.borrow_ref_mut(cs);
             if c.0 {

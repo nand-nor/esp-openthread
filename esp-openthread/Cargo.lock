@@ -374,6 +374,7 @@ dependencies = [
  "heapless",
  "ieee802154",
  "log",
+ "rtt-target",
  "vcell",
 ]
 
@@ -402,6 +403,7 @@ dependencies = [
  "heapless",
  "log",
  "no-std-net",
+ "rtt-target",
 ]
 
 [[package]]
@@ -770,6 +772,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "rtt-target"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10b34c9e6832388e45f3c01f1bb60a016384a0a4ad80cdd7d34913bed25037f0"
+dependencies = [
+ "critical-section",
+ "ufmt-write",
 ]
 
 [[package]]
