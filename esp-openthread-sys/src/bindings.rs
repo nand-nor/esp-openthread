@@ -6543,4 +6543,270 @@ extern "C" {
         aArrayLength: *mut u16,
     ) -> *mut *const crate::c_types::c_char;
 }
+#[doc = "< Indicates the flag is not specified."]
+pub const otDnsRecursionFlag_OT_DNS_FLAG_UNSPECIFIED: otDnsRecursionFlag = 0;
+#[doc = "< Indicates DNS name server can resolve the query recursively."]
+pub const otDnsRecursionFlag_OT_DNS_FLAG_RECURSION_DESIRED: otDnsRecursionFlag = 1;
+#[doc = "< Indicates DNS name server can not resolve the query recursively."]
+pub const otDnsRecursionFlag_OT_DNS_FLAG_NO_RECURSION: otDnsRecursionFlag = 2;
+#[doc = " Type represents the \"Recursion Desired\" (RD) flag in an `otDnsQueryConfig`."]
+pub type otDnsRecursionFlag = crate::c_types::c_uint;
+#[doc = "< NAT64 mode is not specified. Use default NAT64 mode."]
+pub const otDnsNat64Mode_OT_DNS_NAT64_UNSPECIFIED: otDnsNat64Mode = 0;
+#[doc = "< Allow NAT64 address translation during DNS client address resolution."]
+pub const otDnsNat64Mode_OT_DNS_NAT64_ALLOW: otDnsNat64Mode = 1;
+#[doc = "< Do not allow NAT64 address translation during DNS client address resolution."]
+pub const otDnsNat64Mode_OT_DNS_NAT64_DISALLOW: otDnsNat64Mode = 2;
+#[doc = " Type represents the NAT64 mode in an `otDnsQueryConfig`.\n\n The NAT64 mode indicates whether to allow or disallow NAT64 address translation during DNS client address resolution.\n This mode is only used when `OPENTHREAD_CONFIG_DNS_CLIENT_NAT64_ENABLE` is enabled."]
+pub type otDnsNat64Mode = crate::c_types::c_uint;
+#[doc = "< Mode is not specified. Use default service mode."]
+pub const otDnsServiceMode_OT_DNS_SERVICE_MODE_UNSPECIFIED: otDnsServiceMode = 0;
+#[doc = "< Query for SRV record only."]
+pub const otDnsServiceMode_OT_DNS_SERVICE_MODE_SRV: otDnsServiceMode = 1;
+#[doc = "< Query for TXT record only."]
+pub const otDnsServiceMode_OT_DNS_SERVICE_MODE_TXT: otDnsServiceMode = 2;
+#[doc = "< Query for both SRV and TXT records in same message."]
+pub const otDnsServiceMode_OT_DNS_SERVICE_MODE_SRV_TXT: otDnsServiceMode = 3;
+#[doc = "< Query in parallel for SRV and TXT using separate messages."]
+pub const otDnsServiceMode_OT_DNS_SERVICE_MODE_SRV_TXT_SEPARATE: otDnsServiceMode = 4;
+#[doc = "< Query for TXT/SRV together first, if fails then query separately."]
+pub const otDnsServiceMode_OT_DNS_SERVICE_MODE_SRV_TXT_OPTIMIZE: otDnsServiceMode = 5;
+#[doc = " Type represents the service resolution mode in an `otDnsQueryConfig`.\n\n This is only used during DNS client service resolution `otDnsClientResolveService()`. It determines which\n record types to query."]
+pub type otDnsServiceMode = crate::c_types::c_uint;
+pub const otDnsTransportProto_OT_DNS_TRANSPORT_UNSPECIFIED: otDnsTransportProto = 0;
+#[doc = " DNS transport is unspecified."]
+pub const otDnsTransportProto_OT_DNS_TRANSPORT_UDP: otDnsTransportProto = 1;
+#[doc = " DNS query should be sent via UDP."]
+pub const otDnsTransportProto_OT_DNS_TRANSPORT_TCP: otDnsTransportProto = 2;
+#[doc = " Type represents the DNS transport protocol in an `otDnsQueryConfig`.\n\n This `OT_DNS_TRANSPORT_TCP` is only supported when `OPENTHREAD_CONFIG_DNS_CLIENT_OVER_TCP_ENABLE` is enabled."]
+pub type otDnsTransportProto = crate::c_types::c_uint;
+#[doc = " Represents a DNS query configuration.\n\n Any of the fields in this structure can be set to zero to indicate that it is not specified. How the unspecified\n fields are treated is determined by the function which uses the instance of `otDnsQueryConfig`."]
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct otDnsQueryConfig {
+    #[doc = "< Server address (IPv6 addr/port). All zero or zero port for unspecified."]
+    pub mServerSockAddr: otSockAddr,
+    #[doc = "< Wait time (in msec) to rx response. Zero indicates unspecified value."]
+    pub mResponseTimeout: u32,
+    #[doc = "< Maximum tx attempts before reporting failure. Zero for unspecified value."]
+    pub mMaxTxAttempts: u8,
+    #[doc = "< Indicates whether the server can resolve the query recursively or not."]
+    pub mRecursionFlag: otDnsRecursionFlag,
+    #[doc = "< Allow/Disallow NAT64 address translation during address resolution."]
+    pub mNat64Mode: otDnsNat64Mode,
+    #[doc = "< Determines which records to query during service resolution."]
+    pub mServiceMode: otDnsServiceMode,
+    #[doc = "< Select default transport protocol."]
+    pub mTransportProto: otDnsTransportProto,
+}
+extern "C" {
+    #[doc = " Gets the current default query config used by DNS client.\n\n When OpenThread stack starts, the default DNS query config is determined from a set of OT config options such as\n `OPENTHREAD_CONFIG_DNS_CLIENT_DEFAULT_SERVER_IP6_ADDRESS`, `_DEFAULT_SERVER_PORT`, `_DEFAULT_RESPONSE_TIMEOUT`, etc.\n (see `config/dns_client.h` for all related config options).\n\n @param[in]  aInstance        A pointer to an OpenThread instance.\n\n @returns A pointer to the current default config being used by DNS client."]
+    pub fn otDnsClientGetDefaultConfig(aInstance: *mut otInstance) -> *const otDnsQueryConfig;
+}
+extern "C" {
+    #[doc = " Sets the default query config on DNS client.\n\n @note Any ongoing query will continue to use the config from when it was started. The new default config will be\n used for any future DNS queries.\n\n The @p aConfig can be NULL. In this case the default config will be set to the defaults from OT config options\n `OPENTHREAD_CONFIG_DNS_CLIENT_DEFAULT_{}`. This resets the default query config back to to the config when the\n OpenThread stack starts.\n\n In a non-NULL @p aConfig, caller can choose to leave some of the fields in `otDnsQueryConfig` instance unspecified\n (value zero). The unspecified fields are replaced by the corresponding OT config option definitions\n `OPENTHREAD_CONFIG_DNS_CLIENT_DEFAULT_{}` to form the default query config.\n\n When `OPENTHREAD_CONFIG_DNS_CLIENT_DEFAULT_SERVER_ADDRESS_AUTO_SET_ENABLE` is enabled, the server's IPv6 address in\n the default config is automatically set and updated by DNS client. This is done only when user does not explicitly\n set or specify it. This behavior requires SRP client and its auto-start feature to be enabled. SRP client will then\n monitor the Thread Network Data for DNS/SRP Service entries to select an SRP server. The selected SRP server address\n is also set as the DNS server address in the default config.\n\n @param[in]  aInstance   A pointer to an OpenThread instance.\n @param[in]  aConfig     A pointer to the new query config to use as default."]
+    pub fn otDnsClientSetDefaultConfig(
+        aInstance: *mut otInstance,
+        aConfig: *const otDnsQueryConfig,
+    );
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct otDnsAddressResponse {
+    _unused: [u8; 0],
+}
+#[doc = " Pointer is called when a DNS response is received for an address resolution query.\n\n Within this callback the user can use `otDnsAddressResponseGet{Item}()` functions along with the @p aResponse\n pointer to get more info about the response.\n\n The @p aResponse pointer can only be used within this callback and after returning from this function it will not\n stay valid, so the user MUST NOT retain the @p aResponse pointer for later use.\n\n @param[in]  aError     The result of the DNS transaction.\n @param[in]  aResponse  A pointer to the response (it is always non-NULL).\n @param[in]  aContext   A pointer to application-specific context.\n\n The @p aError can have the following:\n\n  - OT_ERROR_NONE              A response was received successfully.\n  - OT_ERROR_ABORT             A DNS transaction was aborted by stack.\n  - OT_ERROR_RESPONSE_TIMEOUT  No DNS response has been received within timeout.\n\n If the server rejects the address resolution request the error code from server is mapped as follow:\n\n  - (0)  NOERROR   Success (no error condition)                    -> OT_ERROR_NONE\n  - (1)  FORMERR   Server unable to interpret due to format error  -> OT_ERROR_PARSE\n  - (2)  SERVFAIL  Server encountered an internal failure          -> OT_ERROR_FAILED\n  - (3)  NXDOMAIN  Name that ought to exist, does not exist        -> OT_ERROR_NOT_FOUND\n  - (4)  NOTIMP    Server does not support the query type (OpCode) -> OT_ERROR_NOT_IMPLEMENTED\n  - (5)  REFUSED   Server refused for policy/security reasons      -> OT_ERROR_SECURITY\n  - (6)  YXDOMAIN  Some name that ought not to exist, does exist   -> OT_ERROR_DUPLICATED\n  - (7)  YXRRSET   Some RRset that ought not to exist, does exist  -> OT_ERROR_DUPLICATED\n  - (8)  NXRRSET   Some RRset that ought to exist, does not exist  -> OT_ERROR_NOT_FOUND\n  - (9)  NOTAUTH   Service is not authoritative for zone           -> OT_ERROR_SECURITY\n  - (10) NOTZONE   A name is not in the zone                       -> OT_ERROR_PARSE\n  - (20) BADNAME   Bad name                                        -> OT_ERROR_PARSE\n  - (21) BADALG    Bad algorithm                                   -> OT_ERROR_SECURITY\n  - (22) BADTRUN   Bad truncation                                  -> OT_ERROR_PARSE\n  - Other response codes                                           -> OT_ERROR_FAILED"]
+pub type otDnsAddressCallback = ::core::option::Option<
+    unsafe extern "C" fn(
+        aError: otError,
+        aResponse: *const otDnsAddressResponse,
+        aContext: *mut crate::c_types::c_void,
+    ),
+>;
+extern "C" {
+    #[doc = " Sends an address resolution DNS query for AAAA (IPv6) record(s) for a given host name.\n\n The @p aConfig can be NULL. In this case the default config (from `otDnsClientGetDefaultConfig()`) will be used as\n the config for this query. In a non-NULL @p aConfig, some of the fields can be left unspecified (value zero). The\n unspecified fields are then replaced by the values from the default config.\n\n @param[in]  aInstance        A pointer to an OpenThread instance.\n @param[in]  aHostName        The host name for which to query the address (MUST NOT be NULL).\n @param[in]  aCallback        A function pointer that shall be called on response reception or time-out.\n @param[in]  aContext         A pointer to arbitrary context information.\n @param[in]  aConfig          A pointer to the config to use for this query.\n\n @retval OT_ERROR_NONE          Query sent successfully. @p aCallback will be invoked to report the status.\n @retval OT_ERROR_NO_BUFS       Insufficient buffer to prepare and send query.\n @retval OT_ERROR_INVALID_ARGS  The host name is not valid format.\n @retval OT_ERROR_INVALID_STATE Cannot send query since Thread interface is not up."]
+    pub fn otDnsClientResolveAddress(
+        aInstance: *mut otInstance,
+        aHostName: *const crate::c_types::c_char,
+        aCallback: otDnsAddressCallback,
+        aContext: *mut crate::c_types::c_void,
+        aConfig: *const otDnsQueryConfig,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Sends an address resolution DNS query for A (IPv4) record(s) for a given host name.\n\n Requires and is available when `OPENTHREAD_CONFIG_DNS_CLIENT_NAT64_ENABLE` is enabled.\n\n When a successful response is received, the addresses are returned from @p aCallback as NAT64 IPv6 translated\n versions of the IPv4 addresses from the query response.\n\n The @p aConfig can be NULL. In this case the default config (from `otDnsClientGetDefaultConfig()`) will be used as\n the config for this query. In a non-NULL @p aConfig, some of the fields can be left unspecified (value zero). The\n unspecified fields are then replaced by the values from the default config.\n\n @param[in]  aInstance        A pointer to an OpenThread instance.\n @param[in]  aHostName        The host name for which to query the address (MUST NOT be NULL).\n @param[in]  aCallback        A function pointer that shall be called on response reception or time-out.\n @param[in]  aContext         A pointer to arbitrary context information.\n @param[in]  aConfig          A pointer to the config to use for this query.\n\n @retval OT_ERROR_NONE          Query sent successfully. @p aCallback will be invoked to report the status.\n @retval OT_ERROR_NO_BUFS       Insufficient buffer to prepare and send query.\n @retval OT_ERROR_INVALID_ARGS  The host name is not valid format or NAT64 is not enabled in config.\n @retval OT_ERROR_INVALID_STATE Cannot send query since Thread interface is not up."]
+    pub fn otDnsClientResolveIp4Address(
+        aInstance: *mut otInstance,
+        aHostName: *const crate::c_types::c_char,
+        aCallback: otDnsAddressCallback,
+        aContext: *mut crate::c_types::c_void,
+        aConfig: *const otDnsQueryConfig,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Gets the full host name associated with an address resolution DNS response.\n\n MUST only be used from `otDnsAddressCallback`.\n\n @param[in]  aResponse         A pointer to the response.\n @param[out] aNameBuffer       A buffer to char array to output the full host name (MUST NOT be NULL).\n @param[in]  aNameBufferSize   The size of @p aNameBuffer.\n\n @retval OT_ERROR_NONE     The full host name was read successfully.\n @retval OT_ERROR_NO_BUFS  The name does not fit in @p aNameBuffer."]
+    pub fn otDnsAddressResponseGetHostName(
+        aResponse: *const otDnsAddressResponse,
+        aNameBuffer: *mut crate::c_types::c_char,
+        aNameBufferSize: u16,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Gets an IPv6 address associated with an address resolution DNS response.\n\n MUST only be used from `otDnsAddressCallback`.\n\n The response may include multiple IPv6 address records. @p aIndex can be used to iterate through the list of\n addresses. Index zero gets the first address and so on. When we reach end of the list, `OT_ERROR_NOT_FOUND` is\n returned.\n\n @param[in]  aResponse     A pointer to the response.\n @param[in]  aIndex        The address record index to retrieve.\n @param[out] aAddress      A pointer to a IPv6 address to output the address (MUST NOT be NULL).\n @param[out] aTtl          A pointer to an `uint32_t` to output TTL for the address. It can be NULL if caller does not\n                           want to get the TTL.\n\n @retval OT_ERROR_NONE           The address was read successfully.\n @retval OT_ERROR_NOT_FOUND      No address record in @p aResponse at @p aIndex.\n @retval OT_ERROR_PARSE          Could not parse the records in the @p aResponse.\n @retval OT_ERROR_INVALID_STATE  No NAT64 prefix (applicable only when NAT64 is allowed)."]
+    pub fn otDnsAddressResponseGetAddress(
+        aResponse: *const otDnsAddressResponse,
+        aIndex: u16,
+        aAddress: *mut otIp6Address,
+        aTtl: *mut u32,
+    ) -> otError;
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct otDnsBrowseResponse {
+    _unused: [u8; 0],
+}
+#[doc = " Pointer is called when a DNS response is received for a browse (service instance enumeration) query.\n\n Within this callback the user can use `otDnsBrowseResponseGet{Item}()` functions along with the @p aResponse\n pointer to get more info about the response.\n\n The @p aResponse pointer can only be used within this callback and after returning from this function it will not\n stay valid, so the user MUST NOT retain the @p aResponse pointer for later use.\n\n @param[in]  aError     The result of the DNS transaction.\n @param[in]  aResponse  A pointer to the response (it is always non-NULL).\n @param[in]  aContext   A pointer to application-specific context.\n\n For the full list of possible values for @p aError, please see `otDnsAddressCallback()`."]
+pub type otDnsBrowseCallback = ::core::option::Option<
+    unsafe extern "C" fn(
+        aError: otError,
+        aResponse: *const otDnsBrowseResponse,
+        aContext: *mut crate::c_types::c_void,
+    ),
+>;
+#[doc = " Provides info for a DNS service instance."]
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct otDnsServiceInfo {
+    #[doc = "< Service record TTL (in seconds)."]
+    pub mTtl: u32,
+    #[doc = "< Service port number."]
+    pub mPort: u16,
+    #[doc = "< Service priority."]
+    pub mPriority: u16,
+    #[doc = "< Service weight."]
+    pub mWeight: u16,
+    #[doc = "< Buffer to output the service host name (can be NULL if not needed)."]
+    pub mHostNameBuffer: *mut crate::c_types::c_char,
+    #[doc = "< Size of `mHostNameBuffer`."]
+    pub mHostNameBufferSize: u16,
+    #[doc = "< The host IPv6 address. Set to all zero if not available."]
+    pub mHostAddress: otIp6Address,
+    #[doc = "< The host address TTL."]
+    pub mHostAddressTtl: u32,
+    #[doc = "< Buffer to output TXT data (can be NULL if not needed)."]
+    pub mTxtData: *mut u8,
+    #[doc = "< On input, size of `mTxtData` buffer. On output number bytes written."]
+    pub mTxtDataSize: u16,
+    #[doc = "< Indicates if TXT data could not fit in `mTxtDataSize` and was truncated."]
+    pub mTxtDataTruncated: bool,
+    #[doc = "< The TXT data TTL."]
+    pub mTxtDataTtl: u32,
+}
+extern "C" {
+    #[doc = " Sends a DNS browse (service instance enumeration) query for a given service name.\n\n Is available when `OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE` is enabled.\n\n The @p aConfig can be NULL. In this case the default config (from `otDnsClientGetDefaultConfig()`) will be used as\n the config for this query. In a non-NULL @p aConfig, some of the fields can be left unspecified (value zero). The\n unspecified fields are then replaced by the values from the default config.\n\n @param[in]  aInstance        A pointer to an OpenThread instance.\n @param[in]  aServiceName     The service name to query for (MUST NOT be NULL).\n @param[in]  aCallback        A function pointer that shall be called on response reception or time-out.\n @param[in]  aContext         A pointer to arbitrary context information.\n @param[in]  aConfig          A pointer to the config to use for this query.\n\n @retval OT_ERROR_NONE        Query sent successfully. @p aCallback will be invoked to report the status.\n @retval OT_ERROR_NO_BUFS     Insufficient buffer to prepare and send query."]
+    pub fn otDnsClientBrowse(
+        aInstance: *mut otInstance,
+        aServiceName: *const crate::c_types::c_char,
+        aCallback: otDnsBrowseCallback,
+        aContext: *mut crate::c_types::c_void,
+        aConfig: *const otDnsQueryConfig,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Gets the service name associated with a DNS browse (service instance enumeration) response.\n\n MUST only be used from `otDnsBrowseCallback`.\n\n @param[in]  aResponse         A pointer to the response.\n @param[out] aNameBuffer       A buffer to char array to output the service name (MUST NOT be NULL).\n @param[in]  aNameBufferSize   The size of @p aNameBuffer.\n\n @retval OT_ERROR_NONE     The service name was read successfully.\n @retval OT_ERROR_NO_BUFS  The name does not fit in @p aNameBuffer."]
+    pub fn otDnsBrowseResponseGetServiceName(
+        aResponse: *const otDnsBrowseResponse,
+        aNameBuffer: *mut crate::c_types::c_char,
+        aNameBufferSize: u16,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Gets a service instance associated with a DNS browse (service instance enumeration) response.\n\n MUST only be used from `otDnsBrowseCallback`.\n\n The response may include multiple service instance records. @p aIndex can be used to iterate through the list. Index\n zero gives the first record. When we reach end of the list, `OT_ERROR_NOT_FOUND` is returned.\n\n Note that this function gets the service instance label and not the full service instance name which is of the form\n `<Instance>.<Service>.<Domain>`.\n\n @param[in]  aResponse          A pointer to the response.\n @param[in]  aIndex             The service instance record index to retrieve.\n @param[out] aLabelBuffer       A buffer to char array to output the service instance label (MUST NOT be NULL).\n @param[in]  aLabelBufferSize   The size of @p aLabelBuffer.\n\n @retval OT_ERROR_NONE          The service instance was read successfully.\n @retval OT_ERROR_NO_BUFS       The name does not fit in @p aNameBuffer.\n @retval OT_ERROR_NOT_FOUND     No service instance record in @p aResponse at @p aIndex.\n @retval OT_ERROR_PARSE         Could not parse the records in the @p aResponse."]
+    pub fn otDnsBrowseResponseGetServiceInstance(
+        aResponse: *const otDnsBrowseResponse,
+        aIndex: u16,
+        aLabelBuffer: *mut crate::c_types::c_char,
+        aLabelBufferSize: u8,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Gets info for a service instance from a DNS browse (service instance enumeration) response.\n\n MUST only be used from `otDnsBrowseCallback`.\n\n A browse DNS response can include SRV, TXT, and AAAA records for the service instances that are enumerated. This is\n a SHOULD and not a MUST requirement, and servers/resolvers are not required to provide this. This function attempts\n to retrieve this info for a given service instance when available.\n\n - If no matching SRV record is found in @p aResponse, `OT_ERROR_NOT_FOUND` is returned. In this case, no additional\n   records (no TXT and/or AAAA) are read.\n - If a matching SRV record is found in @p aResponse, @p aServiceInfo is updated and `OT_ERROR_NONE` is returned.\n - If no matching TXT record is found in @p aResponse, `mTxtDataSize` in @p aServiceInfo is set to zero.\n - If TXT data length is greater than `mTxtDataSize`, it is read partially and `mTxtDataTruncated` is set to true.\n - If no matching AAAA record is found in @p aResponse, `mHostAddress is set to all zero or unspecified address.\n - If there are multiple AAAA records for the host name in @p aResponse, `mHostAddress` is set to the first one. The\n   other addresses can be retrieved using `otDnsBrowseResponseGetHostAddress()`.\n\n @param[in]  aResponse          A pointer to the response.\n @param[in]  aInstanceLabel     The service instance label (MUST NOT be NULL).\n @param[out] aServiceInfo       A `ServiceInfo` to output the service instance information (MUST NOT be NULL).\n\n @retval OT_ERROR_NONE          The service instance info was read. @p aServiceInfo is updated.\n @retval OT_ERROR_NOT_FOUND     Could not find a matching SRV record for @p aInstanceLabel.\n @retval OT_ERROR_NO_BUFS       The host name and/or TXT data could not fit in the given buffers.\n @retval OT_ERROR_PARSE         Could not parse the records in the @p aResponse."]
+    pub fn otDnsBrowseResponseGetServiceInfo(
+        aResponse: *const otDnsBrowseResponse,
+        aInstanceLabel: *const crate::c_types::c_char,
+        aServiceInfo: *mut otDnsServiceInfo,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Gets the host IPv6 address from a DNS browse (service instance enumeration) response.\n\n MUST only be used from `otDnsBrowseCallback`.\n\n The response can include zero or more IPv6 address records. @p aIndex can be used to iterate through the list of\n addresses. Index zero gets the first address and so on. When we reach end of the list, `OT_ERROR_NOT_FOUND` is\n returned.\n\n @param[in]  aResponse     A pointer to the response.\n @param[in]  aHostName     The host name to get the address (MUST NOT be NULL).\n @param[in]  aIndex        The address record index to retrieve.\n @param[out] aAddress      A pointer to a IPv6 address to output the address (MUST NOT be NULL).\n @param[out] aTtl          A pointer to an `uint32_t` to output TTL for the address. It can be NULL if caller does\n                           not want to get the TTL.\n\n @retval OT_ERROR_NONE       The address was read successfully.\n @retval OT_ERROR_NOT_FOUND  No address record for @p aHostname in @p aResponse at @p aIndex.\n @retval OT_ERROR_PARSE      Could not parse the records in the @p aResponse."]
+    pub fn otDnsBrowseResponseGetHostAddress(
+        aResponse: *const otDnsBrowseResponse,
+        aHostName: *const crate::c_types::c_char,
+        aIndex: u16,
+        aAddress: *mut otIp6Address,
+        aTtl: *mut u32,
+    ) -> otError;
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct otDnsServiceResponse {
+    _unused: [u8; 0],
+}
+#[doc = " Pointer is called when a DNS response is received for a service instance resolution query.\n\n Within this callback the user can use `otDnsServiceResponseGet{Item}()` functions along with the @p aResponse\n pointer to get more info about the response.\n\n The @p aResponse pointer can only be used within this callback and after returning from this function it will not\n stay valid, so the user MUST NOT retain the @p aResponse pointer for later use.\n\n @param[in]  aError     The result of the DNS transaction.\n @param[in]  aResponse  A pointer to the response (it is always non-NULL).\n @param[in]  aContext   A pointer to application-specific context.\n\n For the full list of possible values for @p aError, please see `otDnsAddressCallback()`."]
+pub type otDnsServiceCallback = ::core::option::Option<
+    unsafe extern "C" fn(
+        aError: otError,
+        aResponse: *const otDnsServiceResponse,
+        aContext: *mut crate::c_types::c_void,
+    ),
+>;
+extern "C" {
+    #[doc = " Starts a DNS service instance resolution for a given service instance.\n\n Is available when `OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE` is enabled.\n\n The @p aConfig can be NULL. In this case the default config (from `otDnsClientGetDefaultConfig()`) will be used as\n the config for this query. In a non-NULL @p aConfig, some of the fields can be left unspecified (value zero). The\n unspecified fields are then replaced by the values from the default config.\n\n The function sends queries for SRV and/or TXT records for the given service instance. The `mServiceMode` field in\n `otDnsQueryConfig` determines which records to query (SRV only, TXT only, or both SRV and TXT) and how to perform\n the query (together in the same message, separately in parallel, or in optimized mode where client will try in the\n same message first and then separately if it fails to get a response).\n\n The SRV record provides information about service port, priority, and weight along with the host name associated\n with the service instance. This function DOES NOT perform address resolution for the host name discovered from SRV\n record. The server/resolver may provide AAAA/A record(s) for the host name in the Additional Data section of the\n response to SRV/TXT query and this information can be retrieved using `otDnsServiceResponseGetServiceInfo()` in\n `otDnsServiceCallback`. Users of this API MUST NOT assume that host address will always be available from\n `otDnsServiceResponseGetServiceInfo()`.\n\n @param[in]  aInstance          A pointer to an OpenThread instance.\n @param[in]  aInstanceLabel     The service instance label.\n @param[in]  aServiceName       The service name (together with @p aInstanceLabel form full instance name).\n @param[in]  aCallback          A function pointer that shall be called on response reception or time-out.\n @param[in]  aContext           A pointer to arbitrary context information.\n @param[in]  aConfig            A pointer to the config to use for this query.\n\n @retval OT_ERROR_NONE          Query sent successfully. @p aCallback will be invoked to report the status.\n @retval OT_ERROR_NO_BUFS       Insufficient buffer to prepare and send query.\n @retval OT_ERROR_INVALID_ARGS  @p aInstanceLabel is NULL."]
+    pub fn otDnsClientResolveService(
+        aInstance: *mut otInstance,
+        aInstanceLabel: *const crate::c_types::c_char,
+        aServiceName: *const crate::c_types::c_char,
+        aCallback: otDnsServiceCallback,
+        aContext: *mut crate::c_types::c_void,
+        aConfig: *const otDnsQueryConfig,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Starts a DNS service instance resolution for a given service instance, with a potential follow-up\n address resolution for the host name discovered for the service instance.\n\n Is available when `OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE` is enabled.\n\n The @p aConfig can be NULL. In this case the default config (from `otDnsClientGetDefaultConfig()`) will be used as\n the config for this query. In a non-NULL @p aConfig, some of the fields can be left unspecified (value zero). The\n unspecified fields are then replaced by the values from the default config. This function cannot be used with\n `mServiceMode` in DNS config set to `OT_DNS_SERVICE_MODE_TXT` (i.e., querying for TXT record only) and will return\n `OT_ERROR_INVALID_ARGS`.\n\n Behaves similarly to `otDnsClientResolveService()` sending queries for SRV and TXT records. However,\n if the server/resolver does not provide AAAA/A records for the host name in the response to SRV query (in the\n Additional Data section), it will perform host name resolution (sending an AAAA query) for the discovered host name\n from the SRV record. The callback @p aCallback is invoked when responses for all queries are received (i.e., both\n service and host address resolutions are finished).\n\n @param[in]  aInstance          A pointer to an OpenThread instance.\n @param[in]  aInstanceLabel     The service instance label.\n @param[in]  aServiceName       The service name (together with @p aInstanceLabel form full instance name).\n @param[in]  aCallback          A function pointer that shall be called on response reception or time-out.\n @param[in]  aContext           A pointer to arbitrary context information.\n @param[in]  aConfig            A pointer to the config to use for this query.\n\n @retval OT_ERROR_NONE          Query sent successfully. @p aCallback will be invoked to report the status.\n @retval OT_ERROR_NO_BUFS       Insufficient buffer to prepare and send query.\n @retval OT_ERROR_INVALID_ARGS  @p aInstanceLabel is NULL, or @p aConfig is invalid."]
+    pub fn otDnsClientResolveServiceAndHostAddress(
+        aInstance: *mut otInstance,
+        aInstanceLabel: *const crate::c_types::c_char,
+        aServiceName: *const crate::c_types::c_char,
+        aCallback: otDnsServiceCallback,
+        aContext: *mut crate::c_types::c_void,
+        aConfig: *const otDnsQueryConfig,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Gets the service instance name associated with a DNS service instance resolution response.\n\n MUST only be used from `otDnsServiceCallback`.\n\n @param[in]  aResponse         A pointer to the response.\n @param[out] aLabelBuffer      A buffer to char array to output the service instance label (MUST NOT be NULL).\n @param[in]  aLabelBufferSize  The size of @p aLabelBuffer.\n @param[out] aNameBuffer       A buffer to char array to output the rest of service name (can be NULL if user is\n                               not interested in getting the name.\n @param[in]  aNameBufferSize   The size of @p aNameBuffer.\n\n @retval OT_ERROR_NONE     The service name was read successfully.\n @retval OT_ERROR_NO_BUFS  Either the label or name does not fit in the given buffers."]
+    pub fn otDnsServiceResponseGetServiceName(
+        aResponse: *const otDnsServiceResponse,
+        aLabelBuffer: *mut crate::c_types::c_char,
+        aLabelBufferSize: u8,
+        aNameBuffer: *mut crate::c_types::c_char,
+        aNameBufferSize: u16,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Gets info for a service instance from a DNS service instance resolution response.\n\n MUST only be used from a `otDnsServiceCallback` triggered from `otDnsClientResolveService()` or\n `otDnsClientResolveServiceAndHostAddress()`.\n\n When this is is used from a `otDnsClientResolveService()` callback, the DNS response from server/resolver may\n include AAAA records in its Additional Data section for the host name associated with the service instance that is\n resolved. This is a SHOULD and not a MUST requirement so servers/resolvers are not required to provide this. This\n function attempts to parse AAAA record(s) if included in the response. If it is not included `mHostAddress` is set\n to all zeros (unspecified address). To also resolve the host address, user can use the DNS client API function\n `otDnsClientResolveServiceAndHostAddress()` which will perform service resolution followed up by a host name\n address resolution query (when AAAA records are not provided by server/resolver in the SRV query response).\n\n - If a matching SRV record is found in @p aResponse, @p aServiceInfo is updated.\n - If no matching SRV record is found, `OT_ERROR_NOT_FOUND` is returned unless the query config for this query\n   used `OT_DNS_SERVICE_MODE_TXT` for `mServiceMode` (meaning the request was only for TXT record). In this case, we\n   still try to parse the SRV record from Additional Data Section of response (in case server provided the info).\n - If no matching TXT record is found in @p aResponse, `mTxtDataSize` in @p aServiceInfo is set to zero.\n - If TXT data length is greater than `mTxtDataSize`, it is read partially and `mTxtDataTruncated` is set to true.\n - If no matching AAAA record is found in @p aResponse, `mHostAddress is set to all zero or unspecified address.\n - If there are multiple AAAA records for the host name in @p aResponse, `mHostAddress` is set to the first one. The\n   other addresses can be retrieved using `otDnsServiceResponseGetHostAddress()`.\n\n @param[in]  aResponse          A pointer to the response.\n @param[out] aServiceInfo       A `ServiceInfo` to output the service instance information (MUST NOT be NULL).\n\n @retval OT_ERROR_NONE          The service instance info was read. @p aServiceInfo is updated.\n @retval OT_ERROR_NOT_FOUND     Could not find a required record in @p aResponse.\n @retval OT_ERROR_NO_BUFS       The host name and/or TXT data could not fit in the given buffers.\n @retval OT_ERROR_PARSE         Could not parse the records in the @p aResponse."]
+    pub fn otDnsServiceResponseGetServiceInfo(
+        aResponse: *const otDnsServiceResponse,
+        aServiceInfo: *mut otDnsServiceInfo,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " Gets the host IPv6 address from a DNS service instance resolution response.\n\n MUST only be used from `otDnsServiceCallback`.\n\n The response can include zero or more IPv6 address records. @p aIndex can be used to iterate through the list of\n addresses. Index zero gets the first address and so on. When we reach end of the list, `OT_ERROR_NOT_FOUND` is\n returned.\n\n @param[in]  aResponse     A pointer to the response.\n @param[in]  aHostName     The host name to get the address (MUST NOT be NULL).\n @param[in]  aIndex        The address record index to retrieve.\n @param[out] aAddress      A pointer to a IPv6 address to output the address (MUST NOT be NULL).\n @param[out] aTtl          A pointer to an `uint32_t` to output TTL for the address. It can be NULL if caller does\n                           not want to get the TTL.\n\n @retval OT_ERROR_NONE       The address was read successfully.\n @retval OT_ERROR_NOT_FOUND  No address record for @p aHostname in @p aResponse at @p aIndex.\n @retval OT_ERROR_PARSE      Could not parse the records in the @p aResponse."]
+    pub fn otDnsServiceResponseGetHostAddress(
+        aResponse: *const otDnsServiceResponse,
+        aHostName: *const crate::c_types::c_char,
+        aIndex: u16,
+        aAddress: *mut otIp6Address,
+        aTtl: *mut u32,
+    ) -> otError;
+}
 pub type __builtin_va_list = *mut crate::c_types::c_void;
