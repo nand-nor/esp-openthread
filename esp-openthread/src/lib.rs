@@ -7,6 +7,7 @@ mod radio;
 #[cfg(feature = "srp-client")]
 mod srp_client;
 mod timer;
+//mod error;
 
 use core::{
     borrow::BorrowMut,
@@ -56,7 +57,7 @@ use sys::{
         OT_CHANGED_THREAD_NETIF_STATE, OT_CHANGED_THREAD_NETWORK_NAME, OT_CHANGED_THREAD_PANID,
         OT_CHANGED_THREAD_PARTITION_ID, OT_CHANGED_THREAD_RLOC_ADDED,
         OT_CHANGED_THREAD_RLOC_REMOVED, OT_CHANGED_THREAD_ROLE, OT_NETWORK_NAME_MAX_SIZE,
-        OT_RADIO_FRAME_MAX_SIZE,
+        OT_RADIO_FRAME_MAX_SIZE, otThreadGetMeshLocalEid, otSrpClientBuffersServiceEntry
     },
     c_types::c_void,
 };
@@ -739,6 +740,10 @@ impl<'a> OpenThread<'a> {
         unsafe { otPlatRadioGetIeeeEui64(self.instance, out.as_mut_ptr()) }
     }
 
+    pub fn get_mesh_local_eid(&mut self) -> *const otIp6Address {
+        unsafe { otThreadGetMeshLocalEid(self.instance)}
+    }
+
     #[cfg(feature = "srp-client")]
     pub fn setup_srp_client_autostart(
         &mut self,
@@ -796,10 +801,10 @@ impl<'a> OpenThread<'a> {
         weight: Option<u16>,
         lease: Option<u32>,
         key_lease: Option<u32>,
-    ) -> Result<(), Error> {
-        if !srp_client::is_srp_client_running(self.instance) {
-            self.setup_srp_client_autostart(None)?;
-        }
+    ) -> Result<*mut otSrpClientBuffersServiceEntry, Error> {
+       // if !srp_client::is_srp_client_running(self.instance) {
+       //     self.setup_srp_client_autostart(None)?;
+       // }
 
         srp_client::add_srp_client_service(
             self.instance,
@@ -815,9 +820,7 @@ impl<'a> OpenThread<'a> {
             weight,
             lease,
             key_lease,
-        )?;
-
-        Ok(())
+        )
     }
 
     #[cfg(feature = "srp-client")]
@@ -899,6 +902,45 @@ impl<'a> OpenThread<'a> {
             )
         }
     }
+
+    #[cfg(feature = "srp-client")]
+    pub fn set_srp_client_lease_interval(&mut self, interval: u32) -> Result<(), Error> {
+        srp_client::set_srp_client_lease_interval(self.instance, interval);
+        Ok(())
+    }
+
+    #[cfg(feature = "srp-client")]
+    pub fn get_srp_client_lease_interval(&mut self) -> u32 {
+        srp_client::get_srp_client_lease_interval(self.instance)
+    }
+
+    #[cfg(feature = "srp-client")]
+    pub fn set_srp_client_key_lease_interval(&mut self, interval: u32) -> Result<(), Error> {
+        srp_client::set_srp_client_key_lease_interval(self.instance, interval);
+        Ok(())
+    }
+
+    #[cfg(feature = "srp-client")]
+    pub fn get_srp_client_key_lease_interval(&mut self) -> u32 {
+        srp_client::get_srp_client_key_lease_interval(self.instance)
+    }
+
+    #[cfg(feature = "srp-client")]
+    pub fn is_srp_client_running(&mut self) -> bool {
+        srp_client::is_srp_client_running(self.instance)
+    }
+
+    #[cfg(feature = "srp-client")]
+    pub fn srp_client_start(&mut self, address: otSockAddr) -> Result<(), Error> {
+        srp_client::srp_client_start(self.instance, address)
+    }
+
+    #[cfg(feature = "srp-client")]
+    pub fn set_srp_client_host_addresses(&mut self, addresses: &mut [otIp6Address]) -> Result<(), Error> {
+        let len = addresses.len() as u8;
+        srp_client::set_srp_client_host_addresses(self.instance, addresses.as_mut_ptr(), len)
+    }
+
 }
 
 impl<'a> Drop for OpenThread<'a> {
@@ -911,6 +953,15 @@ impl<'a> Drop for OpenThread<'a> {
             SRP_CHANGE_CALLBACK.borrow_ref_mut(cs).take();
         });
     }
+}
+
+pub fn construct_ot_ipv6_addr_struct(addr: Ipv6Addr) -> otIp6Address {
+    let inner = addr.octets();
+    otIp6Address {
+            mFields: otIp6Address__bindgen_ty_1 {
+                m8: inner,
+            },
+        }
 }
 
 #[allow(unused)]
@@ -951,6 +1002,15 @@ unsafe extern "C" fn change_callback(
     });
 }
 
+
+/*
+TODO SRP STATE CHANGE CALLBACK
+iF DNS CLIENT IS OCNFIGURED AND SRP STATE CHANGE HAS VALID SOCKET ADDR DO THIS!
+        otDnsQueryConfig dnsConfig         = *otDnsClientGetDefaultConfig(ThreadStackMgrImpl().OTInstance());
+        dnsConfig.mServerSockAddr.mAddress = aServerSockAddr->mAddress;
+        otDnsClientSetDefaultConfig(ThreadStackMgrImpl().OTInstance(), &dnsConfig);
+
+*/
 #[cfg(feature = "srp-client")]
 unsafe extern "C" fn srp_state_callback(
     error: otError,

@@ -226,7 +226,27 @@ pub(crate) fn set_srp_client_host_name(
 ) -> Result<(), Error> {
     log::debug!("otSrpClient set host name");
 
-    checked!(unsafe { otSrpClientSetHostName(instance, host_name) })
+    let mut size: u16 = 0;
+
+    let mut hostname_size = unsafe { core::ffi::CStr::from_ptr(host_name).to_str().unwrap().len() } as u16;
+
+        let hostname_buf: *mut i8 =
+        unsafe {  otSrpClientBuffersGetHostNameString(instance, &mut size) } as *mut i8;
+    if hostname_size > size  + 1{
+        hostname_size = size;
+    }
+
+
+    unsafe {
+        core::ptr::copy(host_name, hostname_buf, hostname_size as usize + 1);
+        }
+
+
+    // first make sure we can set the host name
+    checked!(unsafe { otSrpClientSetHostName(instance, host_name) })?;
+
+    checked!(unsafe { otSrpClientSetHostName(instance, hostname_buf) })
+
 }
 
 pub(crate) fn get_srp_client_host_name(
@@ -430,7 +450,7 @@ pub(crate) fn add_srp_client_service(
     weight: Option<u16>,
     lease: Option<u32>,
     key_lease: Option<u32>,
-) -> Result<(), Error> {
+) -> Result<*mut otSrpClientBuffersServiceEntry, Error> {
     log::debug!("otSrpClient add service");
 
     let entry: *mut otSrpClientBuffersServiceEntry =
@@ -475,6 +495,8 @@ pub(crate) fn add_srp_client_service(
         if end_index + 1 > size as usize {
             return Err(Error::InternalError(otError_OT_ERROR_NO_BUFS));
         }
+
+        unsafe { (*entry).mService.mSubTypeLabels = sub_types_buf };
     }
 
     if txt_entry.is_null() {
@@ -490,6 +512,7 @@ pub(crate) fn add_srp_client_service(
         unsafe {
             (*entry).mTxtEntry.mValueLength = txt_entry_size;
             core::ptr::copy(txt_entry, txt_buf, txt_entry_size as usize);
+            (*entry).mTxtEntry.mKey = txt_buf;
         }
     }
 
@@ -521,6 +544,10 @@ pub(crate) fn add_srp_client_service(
         }
     }
 
+    // TODO now that we have done this, get the services and make sure we remove any that match before
+    // trying to add. We must do this here after the expected OT struct is constructed from the 
+    // rust-provided params
+
     if let Err(e) = checked!(unsafe { otSrpClientAddService(instance, &mut (*entry).mService) }) {
         log::error!("Error adding service: {e:?}");
         unsafe { otSrpClientBuffersFreeService(instance, entry) };
@@ -528,7 +555,7 @@ pub(crate) fn add_srp_client_service(
     } else {
         log::debug!("otSrpClient add service success");
 
-        Ok(())
+        Ok(entry)
     }
 }
 

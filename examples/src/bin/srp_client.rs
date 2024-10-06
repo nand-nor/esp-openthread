@@ -3,7 +3,7 @@
 #![no_std]
 #![no_main]
 
-use core::{borrow::BorrowMut, cell::RefCell, pin::pin};
+use core::{arch::asm, borrow::BorrowMut, cell::RefCell, pin::pin};
 
 use critical_section::Mutex;
 use esp_backtrace as _;
@@ -14,7 +14,7 @@ use esp_hal::{
 };
 use esp_ieee802154::Ieee802154;
 use esp_openthread::{
-    ChangedFlags, NetworkInterfaceUnicastAddress, OperationalDataset, ThreadTimestamp,
+    sys::bindings::{otIp6Address, otSockAddr, otIp6Address__bindgen_ty_1}, ChangedFlags, NetworkInterfaceUnicastAddress, OperationalDataset, ThreadTimestamp
 };
 use esp_println::println;
 use static_cell::StaticCell;
@@ -26,12 +26,14 @@ use static_cell::StaticCell;
 static HOSTNAME: Mutex<RefCell<&'static str>> = Mutex::new(RefCell::new(BASE_HOSTNAME));
 static SERVICENAME: Mutex<RefCell<&'static str>> = Mutex::new(RefCell::new(BASE_SERVICENAME));
 static INSTANCENAME: Mutex<RefCell<&'static str>> = Mutex::new(RefCell::new(BASE_INSTANCENAME));
-static DNSTXT: Mutex<RefCell<&'static str>> = Mutex::new(RefCell::new(""));
+static DNSTXT: Mutex<RefCell<&'static str>> = Mutex::new(RefCell::new(BASE_DNSTXT));
 static SUBTYPES: Mutex<RefCell<&'static [&'static str]>> = Mutex::new(RefCell::new(&[]));
 
 const BASE_HOSTNAME: &str = "-ot-esp32\0";
-const BASE_SERVICENAME: &str = "-ot-service";
-const BASE_INSTANCENAME: &str = "_otpps._tcp";
+const BASE_SERVICENAME: &str = "-ot-service\0";
+const BASE_INSTANCENAME: &str = "_otpps._udp\0";
+const BASE_DNSTXT: &str = "key=30\0";
+const BASE_SUBTYPE: &str = ",_tlp\0";
 
 const BOUND_PORT: u16 = 1212;
 
@@ -83,17 +85,21 @@ fn main() -> ! {
         network_name: Some("OpenThread-58d1".try_into().unwrap()),
         extended_pan_id: Some([0x3a, 0x90, 0xe3, 0xa3, 0x19, 0xa9, 0x04, 0x94]),
         pan_id: Some(0x58d1),
-        channel: Some(11),
+        channel: Some(25),
         channel_mask: Some(0x07fff800),
         ..OperationalDataset::default()
     };
     println!("dataset : {:?}", dataset);
 
-    if let Err(e) = openthread.setup_srp_client_autostart(None) {
-        log::error!("Error enabling srp client {e:?}");
-    }
-
     openthread.set_active_dataset(dataset).unwrap();
+
+    let srp_changed = Mutex::new(RefCell::new((0, 0, 0, 0,)));
+    let mut srp_callback = |error, a, b, c| {
+        println!("SRP error callback: {:?}", error);
+        critical_section::with(|cs| *srp_changed.borrow_ref_mut(cs) = (error, a, b, c));
+    };
+
+    openthread.set_srp_state_callback(Some(&mut srp_callback));
 
     let rand = esp_openthread::get_random_u32().to_string();
 
@@ -122,18 +128,38 @@ fn main() -> ! {
         openthread.ipv6_get_unicast_addresses();
 
     print_all_addresses(addrs);
+    
+    // stop the client before registering if it is running
+    // Note: the esp-openthread lib currently is built with autostart enabled
+    if openthread.is_srp_client_running(){
+        openthread.stop_srp_client().ok();
+    }
 
     let mut register = false;
 
-    let srp_changed = Mutex::new(RefCell::new((0, 0, 0, 0,)));
-    let mut srp_callback = |error, a, b, c| {
-        println!("SRP error callback: {:?}", error);
-        critical_section::with(|cs| *srp_changed.borrow_ref_mut(cs) = (error, a, b, c));
-    };
+    critical_section::with(|cs| {
+        let mut host = HOSTNAME.borrow_ref_mut(cs);
+        let host = host.borrow_mut();
+
+        if let Err(e) = openthread.setup_srp_client_set_hostname((*host).as_ref()) {
+            log::error!("Error enabling srp client {e:?}");
+        }
+
+    });
+    
+    if let Err(e) = openthread.setup_srp_client_host_addr_autoconfig() {
+        log::error!("Error enabling srp client {e:?}");
+    }
+
+    openthread.set_srp_client_key_lease_interval(6800).ok();
+    openthread.set_srp_client_lease_interval(720).ok();
+    openthread.set_srp_client_ttl(30);
+
 
     loop {
-        openthread.process();
         openthread.run_tasklets();
+        openthread.process();
+        
         critical_section::with(|cs| {
             let mut c = changed.borrow_ref_mut(cs);
             if c.0 {
@@ -147,21 +173,9 @@ fn main() -> ! {
 
         if register {
 
-            openthread.set_srp_state_callback(Some(&mut srp_callback));
 
-            critical_section::with(|cs| {
-                let mut host = HOSTNAME.borrow_ref_mut(cs);
-                let host = host.borrow_mut();
-
-                if let Err(e) = openthread.setup_srp_client_set_hostname((*host).as_ref()) {
-                    log::error!("Error enabling srp client {e:?}");
-                }
-
-            });
-
-            if let Err(e) = openthread.setup_srp_client_host_addr_autoconfig() {
-                log::error!("Error enabling srp client {e:?}");
-            }
+            let state = openthread.get_srp_client_state();
+            println!("SRP client state: {:?}", state);
 
             critical_section::with(|cs| {
                 if let Err(e) = openthread.register_service_with_srp_client(
@@ -169,9 +183,9 @@ fn main() -> ! {
                     *INSTANCENAME.borrow_ref(cs),
                     *SUBTYPES.borrow_ref(cs),
                     *DNSTXT.borrow_ref(cs),
-                    12345,
-                    None,
-                    None,
+                    5683,
+                    Some(1),
+                    Some(1),
                     None,
                     None,
                 ) {
@@ -189,19 +203,45 @@ fn main() -> ! {
             break;
         } 
     }
+        
+    let state = openthread.get_srp_client_state();
+    println!("SRP client state: {:?}", state);
+
+    if let Err(e) = openthread.setup_srp_client_autostart(None) {
+        log::error!("Error enabling srp client {e:?}");
+    }
+
+    let services = openthread.srp_get_services();
+
+    for service in services {
+        unsafe { println!("Service name: {:?}", core::ffi::CStr::from_ptr(service.name).to_str().unwrap()) };
+        unsafe { println!("Instance name: {:?}", core::ffi::CStr::from_ptr(service.instance_name).to_str().unwrap()) };
+        unsafe { println!("DNS key: {:?} value {:?}", core::ffi::CStr::from_ptr((*service.txt_entries).mKey).to_str().unwrap(), (*service.txt_entries).mValue) };
+
+        println!("State: {:?}", service.state);
+    }
+
+
+    unsafe {asm!("fence");}
+
 
     // restrict scope of socket (so we can mutably borrow openthread after we break out of loop)
     {
+
+        let state = openthread.get_srp_client_state();
+        println!("SRP client state: {:?}", state);
+
         let mut socket = openthread.get_udp_socket::<512>().unwrap();
         let mut socket = pin!(socket);
         socket.bind(BOUND_PORT).unwrap();
 
         let mut buffer = [0u8; 512];
-
+        println!("Dropping into UDP socket loop");
+    
         loop {
-
-            openthread.process();
             openthread.run_tasklets();
+            openthread.process();
+            
 
             let (len, from, port) = socket.receive(&mut buffer).unwrap();
 
@@ -231,16 +271,30 @@ fn main() -> ! {
         }
     }
 
+    let state = openthread.get_srp_client_state();
+    println!("SRP client state: {:?}", state);
+
+    let services = openthread.srp_get_services();
+    for service in services {
+        unsafe { println!("Service name: {:?}", core::ffi::CStr::from_ptr(service.name).to_str().unwrap()) };
+        unsafe { println!("Instance name: {:?}", core::ffi::CStr::from_ptr(service.instance_name).to_str().unwrap()) };
+        println!("State: {:?}", service.state);
+    }
+
     if let Err(e) = openthread.srp_unregister_all_services(true, true) {
         log::error!("Failure to unregister all services {e:?}");
     }
 
     println!("SRP services unregistered, no longer receiving UDP packets");
 
+    let state = openthread.get_srp_client_state();
+    println!("SRP client state: {:?}", state);
+
     let mut break_loop = false;
     loop {
-        openthread.process();
         openthread.run_tasklets();
+        openthread.process();
+        
 
         critical_section::with(|cs| {
             let mut c = changed.borrow_ref_mut(cs);
@@ -274,3 +328,12 @@ fn print_all_addresses(addrs: heapless::Vec<NetworkInterfaceUnicastAddress, 5>) 
     }
     println!();
 }
+
+/*
+fn print_services(services: heapless::Vec<NetworkInterfaceUnicastAddress, 5>) {
+    println!("Currently assigned addresses");
+    for addr in addrs {
+        println!("{}", addr.address);
+    }
+    println!();
+}*/ 
